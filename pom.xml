@@ -30,7 +30,7 @@
                         <configuration>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>org.lappsgrid.eager.askme.prototype.Manager</mainClass>
+                                    <mainClass>org.lappsgrid.eager.askme.web.Main</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>
