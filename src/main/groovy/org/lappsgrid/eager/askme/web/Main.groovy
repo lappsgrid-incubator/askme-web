@@ -14,31 +14,29 @@ import java.util.concurrent.TimeUnit
 @Slf4j("logger")
 class Main {
     static final String BOX = 'query sender'
+    static final String QUERY_MBOX = 'query.mailbox'
+    static final String HOST = "rabbitmq.lappsgrid.org"
+    static final String EXCHANGE = "org.lappsgrid.query"
 
-    void dispatch(PostOffice post, String question) {
+    void dispatch(PostOffice post, String question, int id) {
         logger.info("Dispatching queries.")
         logger.debug("Sending {}", question)
-        //print("Dispatching queries")
-        //print("Sending...")
 
-        Message message = new Message().body(question).route('query receiver')
+        Message message = new Message().body(question).route(QUERY_MBOX).set("id", "msg$id")
         post.send(message)
-        //print('Message Sent')
         sleep(500)
 
         logger.debug("Dispatched question")
     }
     
     void run() {
-        //SimpleQueryProcessor processor = new SimpleQueryProcessor()
-        //Query query = processor.transform("What proteins bind to the PDGF-alpha receptor in neural stem cells?")
-        //println query.query
         String question = "What proteins bind to the PDGF-alpha receptor in neural stem cells?"
+        int id = 1
 
-        PostOffice post = new PostOffice('askme.prototype', 'rabbitmq.lappsgrid.org')
+        PostOffice post = new PostOffice(EXCHANGE,HOST)
         CountDownLatch latch = new CountDownLatch(1)
         sleep(500)
-        dispatch(post, question)
+        dispatch(post, question, id)
 
         latch.await(5, TimeUnit.SECONDS)
         logger.debug "Stopping the query-sender."
