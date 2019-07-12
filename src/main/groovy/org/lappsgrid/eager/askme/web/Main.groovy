@@ -19,6 +19,8 @@ class Main extends MessageBox{
     static final String QUERY_MBOX = 'query.mailbox'
     static final String HOST = "rabbitmq.lappsgrid.org"
     static final String EXCHANGE = "org.lappsgrid.query"
+    PostOffice po = new PostOffice(EXCHANGE,HOST)
+
 
     Main(){
         super(EXCHANGE, BOX)
@@ -38,17 +40,17 @@ class Main extends MessageBox{
     void recv(Message message){
         String m = Serializer.toJson(message)
         logger.info('Received processed question: {}', m)
-
+        logger.info('Sending query to solr')
+        message.route('solr.mailbox')
+        po.send(message)
     }
     
     void run() {
         String question = "What proteins bind to the PDGF-alpha receptor in neural stem cells?"
         int id = 1
-
-        PostOffice post = new PostOffice(EXCHANGE,HOST)
         CountDownLatch latch = new CountDownLatch(1)
         sleep(500)
-        dispatch(post, question, id)
+        dispatch(po, question, id)
 
 
 
