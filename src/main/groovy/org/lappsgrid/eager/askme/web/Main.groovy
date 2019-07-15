@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
  */
 @Slf4j("logger")
 class Main extends MessageBox{
-    static final String BOX = 'web'
+    static final String BOX = 'web.mailbox'
     static final String QUERY_MBOX = 'query.mailbox'
     static final String HOST = "rabbitmq.lappsgrid.org"
     static final String EXCHANGE = "org.lappsgrid.query"
@@ -33,16 +33,23 @@ class Main extends MessageBox{
         Message message = new Message().body(question).route(QUERY_MBOX).set("id", "msg$id")
         post.send(message)
         sleep(500)
-
-        logger.debug("Dispatched question")
     }
 
+
     void recv(Message message){
-        String m = Serializer.toJson(message)
-        logger.info('Received processed question: {}', m)
-        logger.info('Sending query to solr')
-        message.route('solr.mailbox')
-        po.send(message)
+
+        if(message.getCommand() == 'query'){
+            logger.info('Received processed question {}', message.getId())
+            logger.info('Sending to solr')
+            message.route('solr.mailbox')
+            po.send(message)
+        }
+        if(message.getCommand() == 'solr'){
+            logger.info('Received solr documents {}', message.getId())
+            logger.info('Sending to ranking')
+        }
+
+
     }
     
     void run() {
