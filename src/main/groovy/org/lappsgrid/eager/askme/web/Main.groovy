@@ -8,6 +8,7 @@ import org.lappsgrid.rabbitmq.topic.MessageBox
 import org.lappsgrid.rabbitmq.topic.PostOffice
 import groovy.util.logging.Slf4j
 import org.lappsgrid.eager.mining.core.json.Serializer
+import java.lang.annotation.Documented
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
