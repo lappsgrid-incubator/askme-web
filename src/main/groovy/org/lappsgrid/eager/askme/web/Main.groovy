@@ -50,10 +50,11 @@ class Main extends MessageBox{
             logger.info('Received solr documents {}', message.getId())
             rankDocuments(message)
         }
-        else if(message.getId() in ID_doc_index){
+        else {
             logger.info('Received ranked document {} from question ID {}', message.getCommand(), message.getId())
-            //add ranked document to respective ID key in ID_doc_index
-            //once all documents are there, return?
+            Object document = message.getBody()
+            ID_doc_index."${message.getId()}"."${message.getCommand()}" = document
+            logger.info(ID_doc_index.toString())
         }
     }
 
@@ -65,7 +66,7 @@ class Main extends MessageBox{
         Map params = message.getParameters()
         String id = message.getId()
         logger.info('Ranking documents {}', id)
-        ID_doc_index."${id}" = []
+        ID_doc_index."${id}" = [:]
 
         int document_number = 0
         documents.each{document ->
@@ -77,6 +78,7 @@ class Main extends MessageBox{
             q.setId(id)
             po.send(q)
             logger.info('Sent document {} from query {} to be ranked.', document_number, id)
+            ID_doc_index."${id}"."${document_number}" = 'Awaiting document'
             document_number+=1
         }
     }
