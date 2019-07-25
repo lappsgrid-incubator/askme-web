@@ -86,7 +86,9 @@ class Main extends MessageBox{
 
     
     void run() {
-        String question = "What proteins bind to the PDGF-alpha receptor in neural stem cells?"
+        String question1 = "What proteins bind to the PDGF-alpha receptor in neural stem cells?"
+        String question2 = "What are inhibitors of Jak1?"
+
         Map params = ["title-checkbox-1" : "1",
         "title-weight-1" : "1.0",
         "title-checkbox-2" : "2",
@@ -121,7 +123,9 @@ class Main extends MessageBox{
 
         int id = 1
         sleep(500)
-        dispatch(po, question, id, params)
+        dispatch(po, question1, id, params)
+        id = 2
+        dispatch(po, question2, id, params)
 
     }
     
