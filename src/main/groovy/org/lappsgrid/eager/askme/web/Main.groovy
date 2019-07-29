@@ -53,8 +53,14 @@ class Main extends MessageBox{
         else {
             logger.info('Received ranked document {} from question ID {}', message.getCommand(), message.getId())
             Object document = message.getBody()
-            ID_doc_index."${message.getId()}"."${message.getCommand()}" = document
-            logger.info(ID_doc_index.toString())
+            ID_doc_index."${message.getId()}".documents.add(document)
+            if(ID_doc_index."${message.getId()}".count == ID_doc_index."${message.getId()}".documents.size()){
+                logger.info("Query {} has all documents ({}) scored", message.getId(),ID_doc_index."${message.getId()}".count.toString())
+                List sorted_documents = ID_doc_index."${message.getId()}".documents.sort {a,b -> b.score <=> a.score}
+                logger.info("Query {} has all documents ({}) ranked", message.getId(),ID_doc_index."${message.getId()}".count.toString())
+                //send to where?
+                ID_doc_index.remove(message.getId())
+            }
         }
     }
 
@@ -70,6 +76,7 @@ class Main extends MessageBox{
 
         int document_number = 0
         documents.each{document ->
+            document_number+=1
             logger.info('Preparing to send document {} from Message {}',document_number,id)
             Map m = [:]
             m.query = query
@@ -78,9 +85,10 @@ class Main extends MessageBox{
             q.setId(id)
             po.send(q)
             logger.info('Sent document {} from query {} to be ranked.', document_number, id)
-            ID_doc_index."${id}"."${document_number}" = 'Awaiting document'
-            document_number+=1
         }
+        ID_doc_index."${id}".count = document_number
+        ID_doc_index."${id}".documents = []
+
     }
 
 
@@ -124,8 +132,8 @@ class Main extends MessageBox{
         int id = 1
         sleep(500)
         dispatch(po, question1, id, params)
-        id = 2
-        dispatch(po, question2, id, params)
+        //id = 2
+        //dispatch(po, question2, id, params)
 
     }
     
