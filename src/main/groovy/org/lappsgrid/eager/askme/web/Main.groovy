@@ -60,6 +60,12 @@ class Main extends MessageBox{
                 logger.info("Query {} has all documents ({}) ranked", message.getId(),ID_doc_index."${message.getId()}".count.toString())
                 //send to where?
                 ID_doc_index.remove(message.getId())
+                Message remove_ranking_processor = new Message()
+                remove_ranking_processor.setRoute([RANKING_MBOX])
+                remove_ranking_processor.setCommand('remove_ranking_processor')
+                remove_ranking_processor.setId(message.getId())
+                logger.info("Removing ranking processor {}", remove_ranking_processor.getId())
+                po.send(remove_ranking_processor)
             }
         }
     }
@@ -132,8 +138,8 @@ class Main extends MessageBox{
         int id = 1
         sleep(500)
         dispatch(po, question1, id, params)
-        //id = 2
-        //dispatch(po, question2, id, params)
+        id = 2
+        dispatch(po, question2, id, params)
 
     }
     
