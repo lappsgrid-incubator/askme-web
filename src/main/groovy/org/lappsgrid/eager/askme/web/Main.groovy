@@ -26,7 +26,7 @@ class Main extends MessageBox{
         super(EXCHANGE, MBOX)
     }
 
-    void dispatch(PostOffice post, String question, int id, Map params) {
+    void dispatch(PostOffice post, String question, int id, Map params, int number_of_documents) {
 
         logger.info("Dispatching question.")
         Message message = new Message()
@@ -35,6 +35,12 @@ class Main extends MessageBox{
         message.setParameters(params)
         message.set("id", "msg$id")
         post.send(message)
+        setupIDIndex(message, number_of_documents)
+    }
+
+    void setupIDIndex(Message message, int number_of_documents){
+        ID_doc_index."${message.getId()}" = [:]
+        ID_doc_index."${message.getId()}".count = number_of_documents
     }
 
 
@@ -43,6 +49,7 @@ class Main extends MessageBox{
         if(message.getCommand() == 'query'){
             logger.info('Received processed question {}', message.getId())
             logger.info('Sending to solr')
+            message.setCommand(ID_doc_index."${message.getId()}".count.toString())
             message.route(SOLR_MBOX)
             po.send(message)
         }
@@ -56,9 +63,18 @@ class Main extends MessageBox{
             ID_doc_index."${message.getId()}".documents.add(document)
             if(ID_doc_index."${message.getId()}".count == ID_doc_index."${message.getId()}".documents.size()){
                 logger.info("Query {} has all documents ({}) scored", message.getId(),ID_doc_index."${message.getId()}".count.toString())
+                Map results = [:]
+
                 List sorted_documents = ID_doc_index."${message.getId()}".documents.sort {a,b -> b.score <=> a.score}
+                int n = ID_doc_index."${message.getId()}".count
+                Query query = ID_doc_index."${message.getId()}".query
+
+                results.query = query
+                results.documents = sorted_documents
+                results.size = n
+
+
                 logger.info("Query {} has all documents ({}) ranked", message.getId(),ID_doc_index."${message.getId()}".count.toString())
-                //send to where?
                 ID_doc_index.remove(message.getId())
                 Message remove_ranking_processor = new Message()
                 remove_ranking_processor.setRoute([RANKING_MBOX])
@@ -78,7 +94,6 @@ class Main extends MessageBox{
         Map params = message.getParameters()
         String id = message.getId()
         logger.info('Ranking documents {}', id)
-        ID_doc_index."${id}" = [:]
 
         int document_number = 0
         documents.each{document ->
@@ -92,7 +107,7 @@ class Main extends MessageBox{
             po.send(q)
             logger.info('Sent document {} from query {} to be ranked.', document_number, id)
         }
-        ID_doc_index."${id}".count = document_number
+        ID_doc_index."${id}".query = query
         ID_doc_index."${id}".documents = []
 
     }
@@ -100,6 +115,7 @@ class Main extends MessageBox{
 
     
     void run() {
+
         String question1 = "What proteins bind to the PDGF-alpha receptor in neural stem cells?"
         String question2 = "What are inhibitors of Jak1?"
 
@@ -136,10 +152,11 @@ class Main extends MessageBox{
         "domain" : "bio"]
 
         int id = 1
+        int number_of_documents = 1
         sleep(500)
-        dispatch(po, question1, id, params)
+        dispatch(po, question1, id, params, number_of_documents)
         id = 2
-        dispatch(po, question2, id, params)
+        dispatch(po, question2, id, params, number_of_documents)
 
     }
     
