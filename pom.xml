@@ -17,6 +17,7 @@
     <build>
         <finalName>web</finalName>
         <plugins>
+            <!--
             <plugin>
                 <artifactId>maven-shade-plugin</artifactId>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -37,6 +38,7 @@
                     </execution>
                 </executions>
             </plugin>
+            -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
