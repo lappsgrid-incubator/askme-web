@@ -54,7 +54,7 @@
                             </descriptorRefs>
                             <archive>
                                 <manifest>
-                                    <mainClass>org.lappsgrid.eager.query.QueryManager</mainClass>
+                                    <mainClass>org.lappsgrid.eager.askme.web.Main</mainClass>
                                 </manifest>
                             </archive>
                         </configuration>
