@@ -1,6 +1,7 @@
 package org.lappsgrid.eager.askme.web
 
 import org.lappsgrid.eager.mining.api.Query
+
 import org.lappsgrid.rabbitmq.Message
 import org.lappsgrid.rabbitmq.topic.MessageBox
 import org.lappsgrid.rabbitmq.topic.PostOffice
@@ -45,8 +46,10 @@ class Main extends MessageBox{
 
 
     void recv(Message message){
-
-        if(message.getCommand() == 'query'){
+        if(message.getBody() == 'EXIT'){
+            shutdown()
+        }
+        else if(message.getCommand() == 'query'){
             logger.info('Received processed question {}', message.getId())
             logger.info('Sending to solr')
             message.setCommand(ID_doc_index."${message.getId()}".count.toString())
@@ -73,7 +76,6 @@ class Main extends MessageBox{
                 results.documents = sorted_documents
                 results.size = n
 
-
                 logger.info("Query {} has all documents ({}) ranked", message.getId(),ID_doc_index."${message.getId()}".count.toString())
                 ID_doc_index.remove(message.getId())
                 Message remove_ranking_processor = new Message()
@@ -83,6 +85,8 @@ class Main extends MessageBox{
                 logger.info("Removing ranking processor {}", remove_ranking_processor.getId())
                 po.send(remove_ranking_processor)
             }
+            send_shutdown()
+
         }
     }
 
@@ -111,13 +115,28 @@ class Main extends MessageBox{
         ID_doc_index."${id}".documents = []
 
     }
+    void send_shutdown(){
+        Message shutdown_message = new Message()
+        shutdown_message.setBody('EXIT')
+        List<String> recip = [QUERY_MBOX,SOLR_MBOX,RANKING_MBOX,MBOX]
+        recip.each{client ->
+            shutdown_message.setRoute([client])
+            po.send(shutdown_message)
+        }
+    }
+    void shutdown(){
+        logger.info('Received shutdown message, terminating askme-web')
+        po.close()
+        logger.info('askme-web terminated')
+        System.exit(0)
+    }
 
 
     
     void run() {
 
         String question1 = "What proteins bind to the PDGF-alpha receptor in neural stem cells?"
-        String question2 = "What are inhibitors of Jak1?"
+        //String question2 = "What are inhibitors of Jak1?"
 
         Map params = ["title-checkbox-1" : "1",
         "title-weight-1" : "1.0",
@@ -155,8 +174,8 @@ class Main extends MessageBox{
         int number_of_documents = 1
         sleep(500)
         dispatch(po, question1, id, params, number_of_documents)
-        id = 2
-        dispatch(po, question2, id, params, number_of_documents)
+        //id = 2
+        //dispatch(po, question2, id, params, number_of_documents)
 
     }
     
