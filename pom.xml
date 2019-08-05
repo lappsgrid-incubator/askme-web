@@ -15,7 +15,7 @@
     <name>AskMe Web</name>
     <description>AskMe Web service.</description>
     <build>
-        <finalName>web</finalName>
+        <finalName>askme-web</finalName>
         <plugins>
             <!--
             <plugin>
@@ -82,6 +82,7 @@
             <artifactId>query</artifactId>
             <version>1.0.0</version>
         </dependency>
+
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
