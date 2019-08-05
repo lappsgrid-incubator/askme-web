@@ -1,4 +1,4 @@
-package org.lappsgrid.eager.askme.web
+package org.lappsgrid.askme.web
 
 import org.lappsgrid.eager.mining.api.Query
 
