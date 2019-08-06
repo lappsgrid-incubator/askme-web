@@ -22,6 +22,11 @@
 
     <name>AskMe Web</name>
     <description>Frontend for the AskMe service.</description>
+    <!--
+    <properties>
+        <start-class>org.lappsgrid.eager.askme.web.EntryPoint</start-class>
+    </properties>
+    -->
     <build>
         <finalName>web</finalName>
         <plugins>
@@ -48,8 +53,34 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>org.lappsgrid.eager.askme.EntryPoint</mainClass>
+                </configuration>
             </plugin>
-
+            <plugin>
+                <groupId>org.anc.maven.plugins</groupId>
+                <artifactId>anc-maven-plugin</artifactId>
+                <version>1.1.0</version>
+                <executions>
+                    <execution>
+                        <id>version-file</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>version</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>version-class</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>version-class</goal>
+                        </goals>
+                        <configuration>
+                            <package>org.lappgrid.askme.web</package>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <!-- Spring generates the jar file for us now.
             <plugin>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -90,10 +121,22 @@
             <artifactId>query</artifactId>
             <version>1.0.0</version>
         </dependency>
+        <!--
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <version>1.7.25</version>
+        </dependency>
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -103,10 +146,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
         </dependency>
+        <!--
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
+        -->
     </dependencies>
     <repositories>
         <repository>

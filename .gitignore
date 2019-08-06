@@ -3,3 +3,8 @@ target/
 *.iml
 *.iws
 *.ipr
+
+*.log
+
+VERSION
+Version.java

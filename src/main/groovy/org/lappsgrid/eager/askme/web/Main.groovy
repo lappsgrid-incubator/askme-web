@@ -4,14 +4,18 @@ import org.lappsgrid.eager.mining.api.Query
 import org.lappsgrid.rabbitmq.Message
 import org.lappsgrid.rabbitmq.topic.MessageBox
 import org.lappsgrid.rabbitmq.topic.PostOffice
-import groovy.util.logging.Slf4j
+//import groovy.util.logging.Slf4j
+//import org.slf4j.Logger
+//import org.slf4j.LoggerFactory
 
 
 /**
  *
  */
-@Slf4j("logger")
+//@Slf4j("logger")
 class Main extends MessageBox{
+//    private static Logger logger = LoggerFactory.getLogger(Main)
+
     static final String MBOX = 'web.mailbox'
     static final String QUERY_MBOX = 'query.mailbox'
     static final String SOLR_MBOX = 'solr.mailbox'
@@ -28,7 +32,7 @@ class Main extends MessageBox{
 
     void dispatch(PostOffice post, String question, int id, Map params, int number_of_documents) {
 
-        logger.info("Dispatching question.")
+        //logger.info("Dispatching question.")
         Message message = new Message()
         message.setBody(question)
         message.setRoute([QUERY_MBOX])
@@ -47,22 +51,22 @@ class Main extends MessageBox{
     void recv(Message message){
 
         if(message.getCommand() == 'query'){
-            logger.info('Received processed question {}', message.getId())
-            logger.info('Sending to solr')
+            //logger.info('Received processed question {}', message.getId())
+            //logger.info('Sending to solr')
             message.setCommand(ID_doc_index."${message.getId()}".count.toString())
             message.route(SOLR_MBOX)
             po.send(message)
         }
         else if(message.getCommand() == 'solr'){
-            logger.info('Received solr documents {}', message.getId())
+            //logger.info('Received solr documents {}', message.getId())
             rankDocuments(message)
         }
         else {
-            logger.info('Received ranked document {} from question ID {}', message.getCommand(), message.getId())
+            //logger.info('Received ranked document {} from question ID {}', message.getCommand(), message.getId())
             Object document = message.getBody()
             ID_doc_index."${message.getId()}".documents.add(document)
             if(ID_doc_index."${message.getId()}".count == ID_doc_index."${message.getId()}".documents.size()){
-                logger.info("Query {} has all documents ({}) scored", message.getId(),ID_doc_index."${message.getId()}".count.toString())
+                //logger.info("Query {} has all documents ({}) scored", message.getId(),ID_doc_index."${message.getId()}".count.toString())
                 Map results = [:]
 
                 List sorted_documents = ID_doc_index."${message.getId()}".documents.sort {a,b -> b.score <=> a.score}
@@ -74,13 +78,13 @@ class Main extends MessageBox{
                 results.size = n
 
 
-                logger.info("Query {} has all documents ({}) ranked", message.getId(),ID_doc_index."${message.getId()}".count.toString())
+                //logger.info("Query {} has all documents ({}) ranked", message.getId(),ID_doc_index."${message.getId()}".count.toString())
                 ID_doc_index.remove(message.getId())
                 Message remove_ranking_processor = new Message()
                 remove_ranking_processor.setRoute([RANKING_MBOX])
                 remove_ranking_processor.setCommand('remove_ranking_processor')
                 remove_ranking_processor.setId(message.getId())
-                logger.info("Removing ranking processor {}", remove_ranking_processor.getId())
+                //logger.info("Removing ranking processor {}", remove_ranking_processor.getId())
                 po.send(remove_ranking_processor)
             }
         }
@@ -93,19 +97,19 @@ class Main extends MessageBox{
 
         Map params = message.getParameters()
         String id = message.getId()
-        logger.info('Ranking documents {}', id)
+        //logger.info('Ranking documents {}', id)
 
         int document_number = 0
         documents.each{document ->
             document_number+=1
-            logger.info('Preparing to send document {} from Message {}',document_number,id)
+            //logger.info('Preparing to send document {} from Message {}',document_number,id)
             Map m = [:]
             m.query = query
             m.document = document
             Message q = new Message(document_number.toString(), m, params, RANKING_MBOX)
             q.setId(id)
             po.send(q)
-            logger.info('Sent document {} from query {} to be ranked.', document_number, id)
+            //logger.info('Sent document {} from query {} to be ranked.', document_number, id)
         }
         ID_doc_index."${id}".query = query
         ID_doc_index."${id}".documents = []
@@ -160,7 +164,7 @@ class Main extends MessageBox{
 
     }
     
-    static void main(String[] args) {
-        new Main().run()
-    }
+//    static void main(String[] args) {
+//        new Main().run()
+//    }
 }
