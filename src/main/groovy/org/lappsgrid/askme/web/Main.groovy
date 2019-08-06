@@ -46,7 +46,7 @@ class Main extends MessageBox{
 
 
     void recv(Message message){
-        if(message.getBody() == 'EXIT'){
+        if(message.getCommand() == 'EXIT' || message.getCommand() == 'QUIT'){
             shutdown()
         }
         else if(message.getCommand() == 'query'){
@@ -117,7 +117,7 @@ class Main extends MessageBox{
     }
     void send_shutdown(){
         Message shutdown_message = new Message()
-        shutdown_message.setBody('EXIT')
+        shutdown_message.setCommand('EXIT')
         List<String> recip = [QUERY_MBOX,SOLR_MBOX,RANKING_MBOX,MBOX]
         recip.each{client ->
             shutdown_message.setRoute([client])
@@ -125,9 +125,9 @@ class Main extends MessageBox{
         }
     }
     void shutdown(){
-        logger.info('Received shutdown message, terminating askme-web')
+        logger.info('Received shutdown message, terminating Web service')
         po.close()
-        logger.info('askme-web terminated')
+        logger.info('Web service terminated')
         System.exit(0)
     }
 
