@@ -1,0 +1,15 @@
+html {
+    head {
+        title(title)
+//        link rel:'stylesheet', type:'text/css', href:'css/main.css'
+//        script(src:'js/jquery.min.js', '')
+    }
+    body {
+        h1 'The Language Applications Grid'
+        h2 'Ask Me (almost) Anything'
+
+        content()
+
+        p 'Copyright 2019 The Language Applications Grid'
+    }
+}
