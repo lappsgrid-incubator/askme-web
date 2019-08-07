@@ -46,8 +46,11 @@ class Main extends MessageBox{
 
 
     void recv(Message message){
-        if(message.getCommand() == 'EXIT' || message.getCommand() == 'QUIT'){
+        if(message.getCommand() == 'EXIT' || message.getCommand() == 'QUIT') {
             shutdown()
+        }
+        else if(message.getCommand() == 'ERROR'){
+            logger.info('Received Error Message: {}', message.getBody())
         }
         else if(message.getCommand() == 'query'){
             logger.info('Received processed question {}', message.getId())
