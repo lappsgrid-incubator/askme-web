@@ -1,5 +1,6 @@
 package org.lappsgrid.askme.web
 
+import org.apache.solr.common.SolrDocument
 import org.lappsgrid.eager.mining.api.Query
 
 import org.lappsgrid.rabbitmq.Message
@@ -179,7 +180,28 @@ class Main extends MessageBox{
         dispatch(po, question1, id, params, number_of_documents)
         //id = 2
         //dispatch(po, question2, id, params, number_of_documents)
+        //testErrorService()
 
+    }
+    void testErrorService(){
+        /*
+        Message query_test = new Message()
+        query_test.setRoute([QUERY_MBOX])
+        po.send(query_test)
+
+        Message solr_test = new Message()
+        solr_test.setRoute([SOLR_MBOX])
+        solr_test.setBody('not empty')
+        po.send(solr_test)
+
+         */
+        Message ranking_test = new Message()
+        ranking_test.setRoute([RANKING_MBOX])
+        Map k = [:]
+        k.document = new SolrDocument()
+        k.query = new Query()
+        ranking_test.setBody(k)
+        po.send(ranking_test)
     }
     
     static void main(String[] args) {
