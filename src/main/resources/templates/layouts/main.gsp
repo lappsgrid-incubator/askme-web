@@ -8,7 +8,9 @@ html {
         h1 'The Language Applications Grid'
         h2 'Ask Me (almost) Anything'
 
-        content()
+        div {
+            content()
+        }
 
         p 'Copyright 2019 The Language Applications Grid'
     }

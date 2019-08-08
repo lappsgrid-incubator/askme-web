@@ -1,6 +1,6 @@
-layout 'layouts/main',
-title: 'Templates: Answer'
+layout 'layouts/main.gsp',
+title: 'Templates: Answer',
 content: {
-    p 'You asked the question: "' + question + ':'
+    p 'You asked the question: "' + q + '"'
     a href:'/', 'Back'
 }

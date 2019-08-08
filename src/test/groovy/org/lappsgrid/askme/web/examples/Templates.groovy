@@ -1,7 +1,8 @@
 package org.lappsgrid.askme.web.examples
 
 /**
- *
+ * A Groovy template is simply a Groovy script that has methods to generate the
+ * various HTML elements.
  */
 class Templates {
 

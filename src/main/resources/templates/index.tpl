@@ -1,4 +1,4 @@
-layout 'layouts/main',
+layout 'layouts/main.gsp',
 title: 'Example Template',
 content: {
     form(action:'formAction', method:'POST') {

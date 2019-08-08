@@ -23,7 +23,7 @@ class Scripts {
         String code = 'println "hello $who."'
 
         Binding binding = new Binding()
-        binding.setVariable("who", "injected variable")
+//        binding.setVariable("who", "injected variable")
         GroovyShell shell = new GroovyShell(binding)
         Script script = shell.parse(code)
         script.run()
