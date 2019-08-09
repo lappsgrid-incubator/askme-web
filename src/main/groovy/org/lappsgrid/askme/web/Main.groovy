@@ -41,52 +41,76 @@ class Main extends MessageBox{
     }
 
     void setupIDIndex(Message message, int number_of_documents){
-        ID_doc_index."${message.getId()}" = [:]
-        ID_doc_index."${message.getId()}".count = number_of_documents
+        //ID_doc_index."${message.getId()}" = [:]
+        //ID_doc_index."${message.getId()}".count = number_of_documents
+        String id = message.getId()
+        ID_doc_index[id] = [:]
+        ID_doc_index[id].count = number_of_documents
     }
 
 
     void recv(Message message){
-        if(message.getCommand() == 'EXIT' || message.getCommand() == 'QUIT') {
+
+        String command = message.getCommand()
+        String id = message.getId()
+        Object body = message.getBody()
+
+
+
+        if(command == 'EXIT' || command == 'QUIT') {
             shutdown()
         }
-        else if(message.getCommand() == 'ERROR'){
-            logger.info('Received Error Message: {}', message.getBody())
+        else if(command == 'ERROR'){
+            logger.info('Received Error Message: {}', body)
         }
-        else if(message.getCommand() == 'query'){
-            logger.info('Received processed question {}', message.getId())
+        else if(command == 'query'){
+            logger.info('Received processed question {}', id)
             logger.info('Sending to solr')
-            message.setCommand(ID_doc_index."${message.getId()}".count.toString())
+            //message.setCommand(ID_doc_index."${message.getId()}".count.toString())
+            message.setCommand(ID_doc_index[id].count.toString())
             message.route(SOLR_MBOX)
             po.send(message)
         }
-        else if(message.getCommand() == 'solr'){
-            logger.info('Received solr documents {}', message.getId())
+        else if(command == 'solr'){
+            logger.info('Received solr documents {}',id)
             rankDocuments(message)
         }
         else {
-            logger.info('Received ranked document {} from question ID {}', message.getCommand(), message.getId())
-            Object document = message.getBody()
-            ID_doc_index."${message.getId()}".documents.add(document)
-            if(ID_doc_index."${message.getId()}".count == ID_doc_index."${message.getId()}".documents.size()){
-                logger.info("Query {} has all documents ({}) scored", message.getId(),ID_doc_index."${message.getId()}".count.toString())
+            logger.info('Received ranked document {} from question ID {}', command, id)
+            Object document = body
+
+            //ID_doc_index."${message.getId()}".documents.add(document)
+            ID_doc_index[id].documents.add(document)
+
+            //if(ID_doc_index."${message.getId()}".count == ID_doc_index."${message.getId()}".documents.size()){
+            if(ID_doc_index[id].count == ID_doc_index[id].documents.size()){
+                //logger.info("Query {} has all documents ({}) scored", id,ID_doc_index."${message.getId()}".count.toString())
+                logger.info("Query {} has all documents ({}) scored", id,ID_doc_index[id].count.toString())
+
                 Map results = [:]
 
-                List sorted_documents = ID_doc_index."${message.getId()}".documents.sort {a,b -> b.score <=> a.score}
-                int n = ID_doc_index."${message.getId()}".count
-                Query query = ID_doc_index."${message.getId()}".query
+                //List sorted_documents = ID_doc_index."${message.getId()}".documents.sort {a,b -> b.score <=> a.score}
+                List sorted_documents = ID_doc_index[id].documents.sort {a,b -> b.score <=> a.score}
+
+                //int n = ID_doc_index."${message.getId()}".count
+                int n = ID_doc_index[id].count
+                //Query query = ID_doc_index."${message.getId()}".query
+                Query query = ID_doc_index[id].query
 
                 results.query = query
                 results.documents = sorted_documents
                 results.size = n
 
-                logger.info("Query {} has all documents ({}) ranked", message.getId(),ID_doc_index."${message.getId()}".count.toString())
-                ID_doc_index.remove(message.getId())
+                //logger.info("Query {} has all documents ({}) ranked", message.getId(),ID_doc_index."${message.getId()}".count.toString())
+                logger.info("Query {} has all documents ({}) ranked", id,ID_doc_index[id].count.toString())
+
+                //ID_doc_index.remove(message.getId())
+                ID_doc_index.remove(id)
                 Message remove_ranking_processor = new Message()
                 remove_ranking_processor.setRoute([RANKING_MBOX])
                 remove_ranking_processor.setCommand('remove_ranking_processor')
-                remove_ranking_processor.setId(message.getId())
-                logger.info("Removing ranking processor {}", remove_ranking_processor.getId())
+                remove_ranking_processor.setId(id)
+                logger.info("Removing ranking processor {}", id)
                 po.send(remove_ranking_processor)
             }
             send_shutdown()
@@ -115,8 +139,10 @@ class Main extends MessageBox{
             po.send(q)
             logger.info('Sent document {} from query {} to be ranked.', document_number, id)
         }
-        ID_doc_index."${id}".query = query
-        ID_doc_index."${id}".documents = []
+        //ID_doc_index."${id}".query = query
+        //ID_doc_index."${id}".documents = []
+        ID_doc_index[id].query = query
+        ID_doc_index[id].documents = []
 
     }
     void send_shutdown(){
