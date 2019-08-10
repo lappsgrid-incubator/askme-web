@@ -7,6 +7,7 @@ import org.lappsgrid.rabbitmq.Message
 import org.lappsgrid.rabbitmq.topic.MessageBox
 import org.lappsgrid.rabbitmq.topic.PostOffice
 import groovy.util.logging.Slf4j
+import org.lappsgrid.serialization.Serializer
 
 
 /**
@@ -46,6 +47,7 @@ class Main extends MessageBox{
         String id = message.getId()
         ID_doc_index[id] = [:]
         ID_doc_index[id].count = number_of_documents
+        logger.info(ID_doc_index.toString())
     }
 
 
@@ -141,8 +143,11 @@ class Main extends MessageBox{
         }
         //ID_doc_index."${id}".query = query
         //ID_doc_index."${id}".documents = []
+        logger.info(ID_doc_index.toString())
         ID_doc_index[id].query = query
         ID_doc_index[id].documents = []
+        logger.info(ID_doc_index.toString())
+
 
     }
     void send_shutdown(){
@@ -165,7 +170,7 @@ class Main extends MessageBox{
     
     void run() {
 
-        String question1 = "What proteins bind to the PDGF-alpha receptor in neural stem cells?"
+        String question1 = "What proteins bind to the PDGF-alpha receptor in neural stem cells"
         //String question2 = "What are inhibitors of Jak1?"
 
         Map params = ["title-checkbox-1" : "1",
