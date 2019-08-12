@@ -4,6 +4,7 @@ import org.apache.solr.common.SolrDocument
 import org.lappsgrid.eager.mining.api.Query
 
 import org.lappsgrid.rabbitmq.Message
+import org.lappsgrid.rabbitmq.topic.MailBox
 import org.lappsgrid.rabbitmq.topic.MessageBox
 import org.lappsgrid.rabbitmq.topic.PostOffice
 import groovy.util.logging.Slf4j
@@ -14,7 +15,7 @@ import org.lappsgrid.serialization.Serializer
  *
  */
 @Slf4j("logger")
-class Main extends MessageBox{
+class Main {
     static final String MBOX = 'web.mailbox'
     static final String QUERY_MBOX = 'query.mailbox'
     static final String SOLR_MBOX = 'solr.mailbox'
@@ -22,14 +23,15 @@ class Main extends MessageBox{
     static final String HOST = "rabbitmq.lappsgrid.org"
     static final String EXCHANGE = "org.lappsgrid.query"
     static final PostOffice po = new PostOffice(EXCHANGE,HOST)
-    Map ID_doc_index = [:]
+    MailBox box
+
 
 
     Main(){
-        super(EXCHANGE, MBOX)
+        //super(EXCHANGE, MBOX)
     }
 
-    void dispatch(PostOffice post, String question, int id, Map params, int number_of_documents) {
+    String dispatch(PostOffice post, String question, int id, Map params) {
 
         logger.info("Dispatching question.")
         Message message = new Message()
@@ -38,89 +40,22 @@ class Main extends MessageBox{
         message.setParameters(params)
         message.set("id", "msg$id")
         post.send(message)
-        setupIDIndex(message, number_of_documents)
+
+        return message.getId()
+        //setupIDIndex(message, number_of_documents)
     }
 
     void setupIDIndex(Message message, int number_of_documents){
-        //ID_doc_index."${message.getId()}" = [:]
-        //ID_doc_index."${message.getId()}".count = number_of_documents
         String id = message.getId()
         ID_doc_index[id] = [:]
         ID_doc_index[id].count = number_of_documents
-        logger.info(ID_doc_index.toString())
+        //logger.info(ID_doc_index.toString())
     }
 
 
-    void recv(Message message){
-
-        String command = message.getCommand()
-        String id = message.getId()
-        Object body = message.getBody()
 
 
-
-        if(command == 'EXIT' || command == 'QUIT') {
-            shutdown()
-        }
-        else if(command == 'ERROR'){
-            logger.info('Received Error Message: {}', body)
-        }
-        else if(command == 'query'){
-            logger.info('Received processed question {}', id)
-            logger.info('Sending to solr')
-            //message.setCommand(ID_doc_index."${message.getId()}".count.toString())
-            message.setCommand(ID_doc_index[id].count.toString())
-            message.route(SOLR_MBOX)
-            po.send(message)
-        }
-        else if(command == 'solr'){
-            logger.info('Received solr documents {}',id)
-            rankDocuments(message)
-        }
-        else {
-            logger.info('Received ranked document {} from question ID {}', command, id)
-            Object document = body
-
-            //ID_doc_index."${message.getId()}".documents.add(document)
-            ID_doc_index[id].documents.add(document)
-
-            //if(ID_doc_index."${message.getId()}".count == ID_doc_index."${message.getId()}".documents.size()){
-            if(ID_doc_index[id].count == ID_doc_index[id].documents.size()){
-                //logger.info("Query {} has all documents ({}) scored", id,ID_doc_index."${message.getId()}".count.toString())
-                logger.info("Query {} has all documents ({}) scored", id,ID_doc_index[id].count.toString())
-
-                Map results = [:]
-
-                //List sorted_documents = ID_doc_index."${message.getId()}".documents.sort {a,b -> b.score <=> a.score}
-                List sorted_documents = ID_doc_index[id].documents.sort {a,b -> b.score <=> a.score}
-
-                //int n = ID_doc_index."${message.getId()}".count
-                int n = ID_doc_index[id].count
-                //Query query = ID_doc_index."${message.getId()}".query
-                Query query = ID_doc_index[id].query
-
-                results.query = query
-                results.documents = sorted_documents
-                results.size = n
-
-                //logger.info("Query {} has all documents ({}) ranked", message.getId(),ID_doc_index."${message.getId()}".count.toString())
-                logger.info("Query {} has all documents ({}) ranked", id,ID_doc_index[id].count.toString())
-
-                //ID_doc_index.remove(message.getId())
-                ID_doc_index.remove(id)
-                Message remove_ranking_processor = new Message()
-                remove_ranking_processor.setRoute([RANKING_MBOX])
-                remove_ranking_processor.setCommand('remove_ranking_processor')
-                remove_ranking_processor.setId(id)
-                logger.info("Removing ranking processor {}", id)
-                po.send(remove_ranking_processor)
-            }
-            send_shutdown()
-
-        }
-    }
-
-    void rankDocuments(Message message){
+    void rankDocuments(Message message, Map ID_doc_index){
         Object map = message.body
         Query query = map.query
         Object documents = map.documents
@@ -141,12 +76,10 @@ class Main extends MessageBox{
             po.send(q)
             logger.info('Sent document {} from query {} to be ranked.', document_number, id)
         }
-        //ID_doc_index."${id}".query = query
-        //ID_doc_index."${id}".documents = []
-        logger.info(ID_doc_index.toString())
+        //logger.info(ID_doc_index.toString())
         ID_doc_index[id].query = query
         ID_doc_index[id].documents = []
-        logger.info(ID_doc_index.toString())
+        //logger.info(ID_doc_index.toString())
 
 
     }
@@ -159,17 +92,15 @@ class Main extends MessageBox{
             po.send(shutdown_message)
         }
     }
-    void shutdown(){
+    void shutdown(Object lock){
         logger.info('Received shutdown message, terminating Web service')
-        po.close()
-        logger.info('Web service terminated')
-        System.exit(0)
+        synchronized(lock) { lock.notify() }
+
     }
 
 
     
-    void run() {
-
+    void run(Object lock) {
         String question1 = "What proteins bind to the PDGF-alpha receptor in neural stem cells"
         //String question2 = "What are inhibitors of Jak1?"
 
@@ -205,13 +136,82 @@ class Main extends MessageBox{
         "abstract-weight-x" : "1.1",
         "domain" : "bio"]
 
-        int id = 1
+        int temp_id = 1
         int number_of_documents = 1
         sleep(500)
-        dispatch(po, question1, id, params, number_of_documents)
-        //id = 2
-        //dispatch(po, question2, id, params, number_of_documents)
-        //testErrorService()
+        String ident = dispatch(po, question1, temp_id, params)
+
+        Map ID_doc_index = [:]
+        ID_doc_index[ident] = [:]
+        ID_doc_index[ident].count = number_of_documents
+
+        box = new MailBox(EXCHANGE, MBOX, HOST) {
+            @Override
+            void recv(String s){
+                logger.info(ID_doc_index.toString())
+
+                Message message = Serializer.parse(s, Message)
+                String command = message.getCommand()
+                String id = message.getId()
+                Object body = message.getBody()
+
+
+                if(command == 'EXIT' || command == 'QUIT') {
+                    shutdown(lock)
+                }
+                else if(command == 'query'){
+                    logger.info('Received processed question {}', id)
+                    logger.info('Sending to solr')
+                    logger.info(ID_doc_index.toString())
+                    message.setCommand(ID_doc_index[id].count.toString())
+                    message.route(SOLR_MBOX)
+                    po.send(message)
+                }
+                else if(command == 'solr'){
+                    logger.info('Received solr documents {}',id)
+                    rankDocuments(message, ID_doc_index)
+                }
+                else {
+                    logger.info('Received ranked document {} from question ID {}', command, id)
+                    Object document = body
+
+                    ID_doc_index[id].documents.add(document)
+
+                    if(ID_doc_index[id].count == ID_doc_index[id].documents.size()){
+                        logger.info("Query {} has all documents ({}) scored", id,ID_doc_index[id].count.toString())
+
+                        Map results = [:]
+
+                        List sorted_documents = ID_doc_index[id].documents.sort {a,b -> b.score <=> a.score}
+
+                        int n = ID_doc_index[id].count
+                        Query query = ID_doc_index[id].query
+
+                        results.query = query
+                        results.documents = sorted_documents
+                        results.size = n
+
+                        logger.info("Query {} has all documents ({}) ranked", id,ID_doc_index[id].count.toString())
+
+                        ID_doc_index.remove(id)
+                        Message remove_ranking_processor = new Message()
+                        remove_ranking_processor.setRoute([RANKING_MBOX])
+                        remove_ranking_processor.setCommand('remove_ranking_processor')
+                        remove_ranking_processor.setId(id)
+                        logger.info("Removing ranking processor {}", id)
+                        po.send(remove_ranking_processor)
+                    }
+                    send_shutdown()
+
+                }
+            }
+        }
+        synchronized(lock) { lock.wait() }
+        box.close()
+        po.close()
+        logger.info("Web service terminated")
+        System.exit(0)
+
 
     }
     void testErrorService(){
@@ -236,6 +236,10 @@ class Main extends MessageBox{
     }
     
     static void main(String[] args) {
-        new Main().run()
+        logger.info("Starting Web service")
+        Object lock = new Object()
+        Thread.start {
+            new Main().run(lock)
+        }
     }
 }
