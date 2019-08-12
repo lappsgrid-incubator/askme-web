@@ -71,9 +71,12 @@ class Main {
             Map m = [:]
             m.query = query
             m.document = document
-            Message q = new Message(document_number.toString(), m, params, RANKING_MBOX)
-            q.setId(id)
-            po.send(q)
+            Message to_ranking = new Message()
+            to_ranking.setId(id)
+            to_ranking.setParameters(params)
+            to_ranking.setRoute([RANKING_MBOX])
+            to_ranking.setBody(m)
+            po.send(to_ranking)
             logger.info('Sent document {} from query {} to be ranked.', document_number, id)
         }
         //logger.info(ID_doc_index.toString())
@@ -102,7 +105,7 @@ class Main {
     
     void run(Object lock) {
         String question1 = "What proteins bind to the PDGF-alpha receptor in neural stem cells"
-        //String question2 = "What are inhibitors of Jak1?"
+        String question2 = "What are inhibitors of Jak1"
 
         Map params = ["title-checkbox-1" : "1",
         "title-weight-1" : "1.0",
@@ -137,19 +140,21 @@ class Main {
         "domain" : "bio"]
 
         int temp_id = 1
-        int number_of_documents = 1
+        int temp_id2 = 2
+        int number_of_documents = 2
         sleep(500)
         String ident = dispatch(po, question1, temp_id, params)
+        //String ident2 = dispatch(po, question2, temp_id2, params)
 
         Map ID_doc_index = [:]
         ID_doc_index[ident] = [:]
         ID_doc_index[ident].count = number_of_documents
+        //ID_doc_index[ident2] = [:]
+        //ID_doc_index[ident2].count = number_of_documents
 
         box = new MailBox(EXCHANGE, MBOX, HOST) {
             @Override
             void recv(String s){
-                logger.info(ID_doc_index.toString())
-
                 Message message = Serializer.parse(s, Message)
                 String command = message.getCommand()
                 String id = message.getId()
@@ -162,7 +167,6 @@ class Main {
                 else if(command == 'query'){
                     logger.info('Received processed question {}', id)
                     logger.info('Sending to solr')
-                    logger.info(ID_doc_index.toString())
                     message.setCommand(ID_doc_index[id].count.toString())
                     message.route(SOLR_MBOX)
                     po.send(message)
@@ -200,9 +204,10 @@ class Main {
                         remove_ranking_processor.setId(id)
                         logger.info("Removing ranking processor {}", id)
                         po.send(remove_ranking_processor)
-                    }
-                    send_shutdown()
 
+                        send_shutdown()
+
+                    }
                 }
             }
         }
