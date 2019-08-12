@@ -95,6 +95,16 @@ class Main {
             po.send(shutdown_message)
         }
     }
+    void test_ping_pong(){
+        Message ping = new Message()
+        ping.setCommand('PING')
+        ping.setBody(MBOX)
+        List<String> recip = [QUERY_MBOX,SOLR_MBOX,RANKING_MBOX]
+        recip.each{client ->
+            ping.setRoute([client])
+            po.send(ping)
+        }
+    }
     void shutdown(Object lock){
         logger.info('Received shutdown message, terminating Web service')
         synchronized(lock) { lock.notify() }
@@ -151,7 +161,6 @@ class Main {
         ID_doc_index[ident].count = number_of_documents
         //ID_doc_index[ident2] = [:]
         //ID_doc_index[ident2].count = number_of_documents
-
         box = new MailBox(EXCHANGE, MBOX, HOST) {
             @Override
             void recv(String s){
@@ -163,6 +172,9 @@ class Main {
 
                 if(command == 'EXIT' || command == 'QUIT') {
                     shutdown(lock)
+                }
+                else if(command == 'PONG'){
+                    logger.info('Received PONG message from {}', body)
                 }
                 else if(command == 'query'){
                     logger.info('Received processed question {}', id)
@@ -205,7 +217,9 @@ class Main {
                         logger.info("Removing ranking processor {}", id)
                         po.send(remove_ranking_processor)
 
-                        send_shutdown()
+                        //send_shutdown()
+                        test_ping_pong()
+
 
                     }
                 }
