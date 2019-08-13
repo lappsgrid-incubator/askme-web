@@ -1,6 +1,5 @@
 package org.lappsgrid.askme.web
 
-import org.apache.solr.common.SolrDocument
 import org.lappsgrid.eager.mining.api.Query
 import org.lappsgrid.rabbitmq.Message
 import org.lappsgrid.rabbitmq.topic.MailBox
@@ -125,8 +124,6 @@ class Main {
                         test_ping_pong()
                         sleep(5000)
                         send_shutdown()
-
-
                     }
                 }
             }
@@ -135,9 +132,6 @@ class Main {
         box.close()
         po.close()
         logger.info("Web service terminated")
-        //System.exit(0)
-
-
     }
     
     static void main(String[] args) {
