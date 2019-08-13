@@ -12,7 +12,7 @@ import org.lappsgrid.serialization.Serializer
  * TODO:
  * 1) Update imports to phase out eager (waiting on askme-core pom)
  * 2) Add exceptions / case statements to recv method?
- * 3)
+ * 3) Integrate with groovy html templates
  */
 
 @Slf4j("logger")
