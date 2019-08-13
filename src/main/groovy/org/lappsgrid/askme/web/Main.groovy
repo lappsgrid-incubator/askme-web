@@ -2,18 +2,19 @@ package org.lappsgrid.askme.web
 
 import org.apache.solr.common.SolrDocument
 import org.lappsgrid.eager.mining.api.Query
-
 import org.lappsgrid.rabbitmq.Message
 import org.lappsgrid.rabbitmq.topic.MailBox
-import org.lappsgrid.rabbitmq.topic.MessageBox
 import org.lappsgrid.rabbitmq.topic.PostOffice
 import groovy.util.logging.Slf4j
 import org.lappsgrid.serialization.Serializer
 
-
 /**
- *
+ * TODO:
+ * 1) Update imports to phase out eager (waiting on askme-core pom)
+ * 2) Add exceptions / case statements to recv method?
+ * 3)
  */
+
 @Slf4j("logger")
 class Main {
     static final String MBOX = 'web.mailbox'
@@ -25,98 +26,12 @@ class Main {
     static final PostOffice po = new PostOffice(EXCHANGE,HOST)
     MailBox box
 
-
-
     Main(){
-        //super(EXCHANGE, MBOX)
     }
 
-    String dispatch(PostOffice post, String question, int id, Map params) {
-
-        logger.info("Dispatching question.")
-        Message message = new Message()
-        message.setBody(question)
-        message.setRoute([QUERY_MBOX])
-        message.setParameters(params)
-        message.set("id", "msg$id")
-        post.send(message)
-
-        return message.getId()
-        //setupIDIndex(message, number_of_documents)
-    }
-
-    void setupIDIndex(Message message, int number_of_documents){
-        String id = message.getId()
-        ID_doc_index[id] = [:]
-        ID_doc_index[id].count = number_of_documents
-        //logger.info(ID_doc_index.toString())
-    }
-
-
-
-
-    void rankDocuments(Message message, Map ID_doc_index){
-        Object map = message.body
-        Query query = map.query
-        Object documents = map.documents
-
-        Map params = message.getParameters()
-        String id = message.getId()
-        logger.info('Ranking documents {}', id)
-
-        int document_number = 0
-        documents.each{document ->
-            document_number+=1
-            logger.info('Preparing to send document {} from Message {}',document_number,id)
-            Map m = [:]
-            m.query = query
-            m.document = document
-            Message to_ranking = new Message()
-            to_ranking.setId(id)
-            to_ranking.setParameters(params)
-            to_ranking.setRoute([RANKING_MBOX])
-            to_ranking.setBody(m)
-            po.send(to_ranking)
-            logger.info('Sent document {} from query {} to be ranked.', document_number, id)
-        }
-        //logger.info(ID_doc_index.toString())
-        ID_doc_index[id].query = query
-        ID_doc_index[id].documents = []
-        //logger.info(ID_doc_index.toString())
-
-
-    }
-    void send_shutdown(){
-        Message shutdown_message = new Message()
-        shutdown_message.setCommand('EXIT')
-        List<String> recip = [QUERY_MBOX,SOLR_MBOX,RANKING_MBOX,MBOX]
-        recip.each{client ->
-            shutdown_message.setRoute([client])
-            po.send(shutdown_message)
-        }
-    }
-    void test_ping_pong(){
-        Message ping = new Message()
-        ping.setCommand('PING')
-        ping.setBody(MBOX)
-        List<String> recip = [QUERY_MBOX,SOLR_MBOX,RANKING_MBOX]
-        recip.each{client ->
-            ping.setRoute([client])
-            po.send(ping)
-        }
-    }
-    void shutdown(Object lock){
-        logger.info('Received shutdown message, terminating Web service')
-        synchronized(lock) { lock.notify() }
-
-    }
-
-
-    
     void run(Object lock) {
-        String question1 = "What proteins bind to the PDGF-alpha receptor in neural stem cells"
-        String question2 = "What are inhibitors of Jak1"
-
+        //General setup, and dispatching of example question
+        String question = "What proteins bind to the PDGF-alpha receptor in neural stem cells"
         Map params = ["title-checkbox-1" : "1",
         "title-weight-1" : "1.0",
         "title-checkbox-2" : "2",
@@ -148,19 +63,16 @@ class Main {
         "abstract-weight-7" : "1.0",
         "abstract-weight-x" : "1.1",
         "domain" : "bio"]
-
         int temp_id = 1
-        int temp_id2 = 2
         int number_of_documents = 2
         sleep(500)
-        String ident = dispatch(po, question1, temp_id, params)
-        //String ident2 = dispatch(po, question2, temp_id2, params)
-
+        //Need to return ID, to update ID_doc_index count parameter
+        String ident = dispatch(po, question, temp_id, params)
         Map ID_doc_index = [:]
         ID_doc_index[ident] = [:]
         ID_doc_index[ident].count = number_of_documents
-        //ID_doc_index[ident2] = [:]
-        //ID_doc_index[ident2].count = number_of_documents
+
+
         box = new MailBox(EXCHANGE, MBOX, HOST) {
             @Override
             void recv(String s){
@@ -169,9 +81,9 @@ class Main {
                 String id = message.getId()
                 Object body = message.getBody()
 
-
                 if(command == 'EXIT' || command == 'QUIT') {
-                    shutdown(lock)
+                    logger.info('Received shutdown message, terminating Web service')
+                    synchronized(lock) { lock.notify() }
                 }
                 else if(command == 'PONG'){
                     logger.info('Received PONG message from {}', body)
@@ -190,25 +102,17 @@ class Main {
                 else {
                     logger.info('Received ranked document {} from question ID {}', command, id)
                     Object document = body
-
                     ID_doc_index[id].documents.add(document)
-
                     if(ID_doc_index[id].count == ID_doc_index[id].documents.size()){
                         logger.info("Query {} has all documents ({}) scored", id,ID_doc_index[id].count.toString())
-
                         Map results = [:]
-
                         List sorted_documents = ID_doc_index[id].documents.sort {a,b -> b.score <=> a.score}
-
                         int n = ID_doc_index[id].count
                         Query query = ID_doc_index[id].query
-
                         results.query = query
                         results.documents = sorted_documents
                         results.size = n
-
                         logger.info("Query {} has all documents ({}) ranked", id,ID_doc_index[id].count.toString())
-
                         ID_doc_index.remove(id)
                         Message remove_ranking_processor = new Message()
                         remove_ranking_processor.setRoute([RANKING_MBOX])
@@ -217,8 +121,10 @@ class Main {
                         logger.info("Removing ranking processor {}", id)
                         po.send(remove_ranking_processor)
 
-                        //send_shutdown()
+                        //Only tested here because of one question
                         test_ping_pong()
+                        sleep(5000)
+                        send_shutdown()
 
 
                     }
@@ -229,29 +135,9 @@ class Main {
         box.close()
         po.close()
         logger.info("Web service terminated")
-        System.exit(0)
+        //System.exit(0)
 
 
-    }
-    void testErrorService(){
-        /*
-        Message query_test = new Message()
-        query_test.setRoute([QUERY_MBOX])
-        po.send(query_test)
-
-        Message solr_test = new Message()
-        solr_test.setRoute([SOLR_MBOX])
-        solr_test.setBody('not empty')
-        po.send(solr_test)
-
-         */
-        Message ranking_test = new Message()
-        ranking_test.setRoute([RANKING_MBOX])
-        Map k = [:]
-        k.document = new SolrDocument()
-        k.query = new Query()
-        ranking_test.setBody(k)
-        po.send(ranking_test)
     }
     
     static void main(String[] args) {
@@ -261,4 +147,99 @@ class Main {
             new Main().run(lock)
         }
     }
+
+    String dispatch(PostOffice post, String question, int id, Map params) {
+        logger.info("Dispatching question.")
+        Message message = new Message()
+        message.setBody(question)
+        message.setRoute([QUERY_MBOX])
+        message.setParameters(params)
+        message.set("id", "msg$id")
+        post.send(message)
+        return message.getId()
+    }
+
+    void rankDocuments(Message message, Map ID_doc_index){
+        Object map = message.body
+        Query query = map.query
+        Object documents = map.documents
+        Map params = message.getParameters()
+        String id = message.getId()
+        logger.info('Ranking documents {}', id)
+        int document_number = 0
+        documents.each{document ->
+            document_number+=1
+            logger.info('Preparing to send document {} from Message {}',document_number,id)
+            Map m = [:]
+            m.query = query
+            m.document = document
+            Message to_ranking = new Message()
+            to_ranking.setId(id)
+            to_ranking.setParameters(params)
+            to_ranking.setRoute([RANKING_MBOX])
+            to_ranking.setBody(m)
+            po.send(to_ranking)
+            logger.info('Sent document {} from query {} to be ranked.', document_number, id)
+        }
+        ID_doc_index[id].query = query
+        ID_doc_index[id].documents = []
+    }
+
+    //Tests for shutdown and PING PONG
+    void send_shutdown(){
+        Message shutdown_message = new Message()
+        shutdown_message.setCommand('EXIT')
+        List<String> recip = [QUERY_MBOX,SOLR_MBOX,RANKING_MBOX,MBOX]
+        recip.each{client ->
+            shutdown_message.setRoute([client])
+            po.send(shutdown_message)
+        }
+    }
+    void test_ping_pong(){
+        Message ping = new Message()
+        ping.setCommand('PING')
+        ping.setBody(MBOX)
+        List<String> recip = [QUERY_MBOX,SOLR_MBOX,RANKING_MBOX]
+        recip.each{client ->
+            ping.setRoute([client])
+            po.send(ping)
+        }
+    }
+
+
+
+
+    /**
+     void testErrorService(){
+     /*
+     Message query_test = new Message()
+     query_test.setRoute([QUERY_MBOX])
+     po.send(query_test)
+
+     Message solr_test = new Message()
+     solr_test.setRoute([SOLR_MBOX])
+     solr_test.setBody('not empty')
+     po.send(solr_test)
+
+
+     Message ranking_test = new Message()
+     ranking_test.setRoute([RANKING_MBOX])
+     Map k = [:]
+     k.document = new SolrDocument()
+     k.query = new Query()
+     ranking_test.setBody(k)
+     po.send(ranking_test)
+     }
+
+
+     void setupIDIndex(Message message, int number_of_documents){
+     String id = message.getId()
+     ID_doc_index[id] = [:]
+     ID_doc_index[id].count = number_of_documents
+     //logger.info(ID_doc_index.toString())
+     }
+
+
+     */
+
 }
