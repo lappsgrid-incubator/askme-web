@@ -22,13 +22,12 @@ class TemplateController {
 
     @PostMapping(path="/formAction", produces = "text/html")
     String handlePost(@RequestParam Map<String,String> params, Model model) {
-        // Attributes set in the model will be available in the template.  Here we
-        // simply pass the question from the form to the model.
-
         params.each { k,v ->
             logger.debug("$k = $v")
         }
-//        model.addAllAttributes(params)
+
+        // Attributes set in the model will be available in the template.  Here we
+        // simply pass the question from the form to the model.
         model.addAttribute("q", params.question)
         return 'question'
     }
