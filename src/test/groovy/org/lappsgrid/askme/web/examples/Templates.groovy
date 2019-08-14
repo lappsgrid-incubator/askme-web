@@ -6,32 +6,55 @@ package org.lappsgrid.askme.web.examples
  */
 class Templates {
 
-    String html(String body) {
-        return "<html>$body</html>"
+    void html(String body) {
+        println "<html>$body</html>"
     }
 
-    String html(Closure cl) {
-        String body = cl()
-        return "<html>$body</html>"
+    void html(Closure cl) {
+        //String body = cl()
+        //return "<html>$body</html>"
+        print "<html>"
+        cl()
+        println "</html>"
     }
 
-    String body(Closure cl) {
-        return "<body>${cl()}</body>"
+    void body(Closure cl) {
+        print "<body>"
+        cl()
+        print "</body>"
     }
 
-    String p(String body) {
-        return "<p>$body</p>"
+    void p(String body) {
+        print "<p>$body</p>"
+    }
+
+    void div(Map params, Closure cl) {
+        String atts = params.entrySet().collect { e -> "${e.key}='${e.value}'"}.join(" ")
+        print "<div $atts>"
+        cl()
+        print "</div>"
     }
 
     void run() {
-        println html("hello world")
-        println html {
-            "Goodbye cruel world"
+        html("hello world")
+        html {
+            p"Goodbye cruel world"
         }
 
-        println html {
+        html {
             body {
                 p 'I am leaving you today.'
+            }
+        }
+
+        html {
+            body {
+                div(class:'section', width:100) {
+                    p("This is the content")
+                }
+                div class:'copyright', {
+                    p "Copyright 2019."
+                }
             }
         }
     }

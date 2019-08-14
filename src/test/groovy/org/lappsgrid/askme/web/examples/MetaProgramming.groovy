@@ -3,10 +3,13 @@ package org.lappsgrid.askme.web.examples
 import org.junit.Test
 
 /**
- *
+ * Each class in Groovy has
  */
-class Builders {
+class MetaProgramming {
 
+    /*
+     * Define a custom MetaClass with a fixed set of new methods.
+     */
     MetaClass makeMetaclass(Class theClass) {
         ExpandoMetaClass meta = new ExpandoMetaClass(theClass)
         meta.html = { Closure cl ->
@@ -19,6 +22,7 @@ class Builders {
             return "<p>$body</p>"
         }
         meta.initialize()
+
         return meta
     }
 
@@ -36,4 +40,14 @@ html {
         script.metaClass = makeMetaclass(script.class)
         println script.run()
     }
+
+    @Test
+    void metaProgramming() {
+        String.metaClass.greet {
+            println "Hello $delegate"
+        }
+        String s = "world"
+        s.greet()
+    }
+
 }
