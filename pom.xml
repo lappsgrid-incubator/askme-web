@@ -15,7 +15,7 @@
     <name>AskMe Web</name>
     <description>AskMe Web service.</description>
     <build>
-        <finalName>askme-web</finalName>
+        <finalName>service</finalName>
         <plugins>
             <!--
             <plugin>
