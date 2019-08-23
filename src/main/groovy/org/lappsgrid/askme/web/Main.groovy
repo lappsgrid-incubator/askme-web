@@ -1,5 +1,6 @@
 package org.lappsgrid.askme.web
 
+import org.lappsgrid.askme.core.Configuration
 import org.lappsgrid.askme.core.api.Query
 import org.lappsgrid.rabbitmq.Message
 import org.lappsgrid.rabbitmq.topic.MailBox
@@ -20,15 +21,17 @@ class Main {
     static final String QUERY_MBOX = 'query.mailbox'
     static final String SOLR_MBOX = 'solr.mailbox'
     static final String RANKING_MBOX = 'ranking.mailbox'
-    static final String HOST = "rabbitmq.lappsgrid.org"
-    static final String EXCHANGE = "org.lappsgrid.query"
-    static final PostOffice po = new PostOffice(EXCHANGE,HOST)
+
+    static final Configuration config = new Configuration()
+
+    static final PostOffice po = new PostOffice(config.EXCHANGE,config.HOST)
     MailBox box
 
     Main(){
     }
 
     void run(Object lock) {
+        println 'Running main'
         //General setup, and dispatching of example question
         String question = "What proteins bind to the PDGF-alpha receptor in neural stem cells"
         Map params = ["title-checkbox-1" : "1",
@@ -64,17 +67,18 @@ class Main {
         "domain" : "bio"]
         int temp_id = 1
         int number_of_documents = 2
-        sleep(500)
+//        sleep(500)
         //Need to return ID, to update ID_doc_index count parameter
-        String ident = dispatch(po, question, temp_id, params)
+//        String ident = dispatch(po, question, temp_id, params)
         Map ID_doc_index = [:]
-        ID_doc_index[ident] = [:]
-        ID_doc_index[ident].count = number_of_documents
+//        ID_doc_index[ident] = [:]
+//        ID_doc_index[ident].count = number_of_documents
 
 
-        box = new MailBox(EXCHANGE, MBOX, HOST) {
+        box = new MailBox(config.EXCHANGE, MBOX, config.HOST) {
             @Override
             void recv(String s){
+                println "Received a message: $s"
                 Message message = Serializer.parse(s, Message)
                 String command = message.getCommand()
                 String id = message.getId()
@@ -84,15 +88,24 @@ class Main {
                     logger.info('Received shutdown message, terminating Web service')
                     synchronized(lock) { lock.notify() }
                 }
-                else if(command == 'PONG'){
-                    logger.info('Received PONG message from {}', body)
+                else if(command == 'PING'){
+                    logger.info('Received PING message from {}', body)
+                    message.command = 'PONG'
+                    message.body = 'PONG'
+                    Main.this.po.send(message)
+                }
+                else if (command == 'ask') {
+                    logger.info "Asking question"
+                    String ident = dispatch(question, params)
+                    ID_doc_index[ident] = [:]
+//                    ID_doc_index[ident].count = number_of_documents
                 }
                 else if(command == 'query'){
                     logger.info('Received processed question {}', id)
                     logger.info('Sending to solr')
                     message.setCommand(ID_doc_index[id].count.toString())
                     message.route(SOLR_MBOX)
-                    po.send(message)
+                    Main.this.po.send(message)
                 }
                 else if(command == 'solr'){
                     logger.info('Received solr documents {}',id)
@@ -118,7 +131,7 @@ class Main {
                         remove_ranking_processor.setCommand('remove_ranking_processor')
                         remove_ranking_processor.setId(id)
                         logger.info("Removing ranking processor {}", id)
-                        po.send(remove_ranking_processor)
+                        Main.this.po.send(remove_ranking_processor)
 
                         //Only tested here because of one question
                         test_ping_pong()
@@ -142,14 +155,14 @@ class Main {
         }
     }
 
-    String dispatch(PostOffice post, String question, int id, Map params) {
+    String dispatch(String question, Map params) {
         logger.info("Dispatching question.")
         Message message = new Message()
         message.setBody(question)
         message.setRoute([QUERY_MBOX])
         message.setParameters(params)
-        message.set("id", "msg$id")
-        post.send(message)
+        message.set("id", UUID.randomUUID().toString())
+        po.send(message)
         return message.getId()
     }
 
