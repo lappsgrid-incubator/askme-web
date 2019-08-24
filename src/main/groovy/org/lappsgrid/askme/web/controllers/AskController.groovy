@@ -11,6 +11,7 @@ import org.lappsgrid.askme.core.Configuration
 import org.lappsgrid.askme.core.api.Query
 import org.lappsgrid.askme.core.api.QueryProcessor
 import org.lappsgrid.askme.core.ssl.SSL
+import org.lappsgrid.askme.web.Version
 import org.lappsgrid.askme.web.db.Database
 import org.lappsgrid.askme.web.db.Question
 import org.lappsgrid.askme.web.util.DataCache
