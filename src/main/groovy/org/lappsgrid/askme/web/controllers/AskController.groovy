@@ -2,13 +2,7 @@ package org.lappsgrid.askme.web.controllers
 
 import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
-import org.apache.solr.client.solrj.SolrClient
-import org.apache.solr.client.solrj.impl.CloudSolrClient
-import org.apache.solr.client.solrj.response.QueryResponse
-import org.apache.solr.common.SolrDocumentList
-import org.apache.solr.common.params.MapSolrParams
 import org.lappsgrid.askme.core.Configuration
-import org.lappsgrid.askme.core.api.Query
 import org.lappsgrid.askme.core.api.QueryProcessor
 import org.lappsgrid.askme.core.ssl.SSL
 import org.lappsgrid.askme.web.Version
@@ -19,6 +13,7 @@ import org.lappsgrid.discriminator.Discriminators
 import org.lappsgrid.rabbitmq.Message
 import org.lappsgrid.rabbitmq.topic.MailBox
 import org.lappsgrid.rabbitmq.topic.PostOffice
+import org.lappsgrid.serialization.Data
 
 /*
 import org.lappsgrid.eager.mining.api.Query
@@ -42,7 +37,7 @@ import org.lappsgrid.eager.rabbitmq.topic.MailBox
 import org.lappsgrid.eager.rabbitmq.topic.PostOffice
 import org.lappsgrid.eager.service.Version
 */
-import org.lappsgrid.serialization.Data
+
 import org.lappsgrid.serialization.Serializer
 import org.lappsgrid.serialization.lif.Container
 import org.springframework.beans.factory.annotation.Autowired
