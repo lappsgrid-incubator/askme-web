@@ -3,6 +3,7 @@ package org.lappsgrid.askme.web
 import org.junit.After
 import org.junit.Before
 import org.junit.BeforeClass
+import org.junit.Ignore
 import org.junit.Test
 import org.lappsgrid.askme.core.Configuration
 import org.lappsgrid.rabbitmq.Message
@@ -12,6 +13,7 @@ import org.lappsgrid.rabbitmq.topic.PostOffice
 /**
  *
  */
+@Ignore
 class MainTest {
     static Configuration config
     Main app
