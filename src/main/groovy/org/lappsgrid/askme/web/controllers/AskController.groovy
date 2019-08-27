@@ -41,6 +41,7 @@ import org.lappsgrid.eager.service.Version
 import org.lappsgrid.serialization.Serializer
 import org.lappsgrid.serialization.lif.Container
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.env.Environment
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
@@ -61,6 +62,36 @@ class AskController {
 
     private static final Configuration c = new Configuration()
 
+//    @Autowired
+//    private final AskmeSettings settings
+
+//    @Value('${solr.host}')
+//    String SOLR_HOST
+
+    @Value('${cache.dir}')
+    final String CACHE_DIR
+
+    @Value('${cache.ttl')
+    final int CACHE_TTL
+
+    @Value('${work.dir}')
+    final String WORK_DIR
+
+    @Value('${query.mailbox}')
+    final String QUERY_MBOX
+
+    @Value('${nlp.mailbox')
+    final String NLP_MBOX
+
+    @Value('${solr.mailbox}')
+    final String SOLR_MBOX
+
+    @Value('${ranking.mailbox}')
+    final String RANKING_MBOX
+
+    @Value('${web.mailbox')
+    final String WEB_MBOX
+    
     @Autowired
     Database db
 
@@ -81,12 +112,19 @@ class AskController {
 //        queryProcessor = new SimpleQueryProcessor()
 //        geoProcessor = new GDDSnippetQueryProcessor()
 //        documentProcessor = new DocumentProcessor()
-
+//        settings = new AskmeSettings()
         SSL.enable()
     }
 
     @PostConstruct
     private void init() {
+        cache = new DataCache(CACHE_DIR, CACHE_TTL)
+        workingDir = new File(WORK_DIR)
+        if (!workingDir.exists()) {
+            workingDir.mkdirs()
+        }
+
+        /*
         config = new ConfigObject()
         Map m = [:]
         set(m, 'solr.host')
@@ -114,6 +152,7 @@ class AskController {
         if (!workingDir.exists()) {
             workingDir.mkdirs()
         }
+        */
     }
 
     void set(Map map, String key) {
@@ -139,6 +178,13 @@ class AskController {
             set(current, parts, value)
         }
     }
+
+//    @GetMapping(path="/env", produces = ['text/plain'])
+//    String printEnv(Model model) {
+//        model.addAttribute("solr_host", settings.solr.host)
+//        model.addAttribute("solr_collection", settings.solr.collection)
+//        return "environment"
+//    }
 
     @GetMapping(path="/show", produces = ['text/html'])
     @ResponseBody String getShow(@RequestParam String path) {
@@ -346,16 +392,12 @@ class AskController {
         updateModel(model)
         String uuid = UUID.randomUUID()
         saveQuestion(uuid, params)
-//        if (true) {
-//            model.addAttribute("params", params)
-//            return "dump"
+//        if (params.domain == 'geo') {
+//            //TODO Check that a question has been entered
+//            model.addAttribute('data', geodeepdive(params, 1000))
+//            logger.debug("Rendering geodd")
+//            return 'geodd'
 //        }
-        if (params.domain == 'geo') {
-            //TODO Check that a question has been entered
-            model.addAttribute('data', geodeepdive(params, 1000))
-            logger.debug("Rendering geodd")
-            return 'geodd'
-        }
 
         long start = System.currentTimeMillis()
         Map reply = answer(params, 100)
@@ -401,6 +443,13 @@ class AskController {
 
     private Map answer(Map params, int size) {
         logger.debug("Generating answer.")
+
+        Message message = new Message()
+        message.setBody(params.question)
+        message.setRoute([QUERY_MBOX, W])
+        message.setParameters(params)
+        message.set("id", UUID.randomUUID().toString())
+        po.send(message)
 
 //        logger.trace("Creating CloudSolrClient")
 //        SolrClient solr = new CloudSolrClient.Builder([config.solr.host]).build();
