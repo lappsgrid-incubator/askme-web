@@ -3,7 +3,6 @@ package org.lappsgrid.askme.web.controllers
 import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
 import org.lappsgrid.askme.core.Configuration
-import org.lappsgrid.askme.core.api.QueryProcessor
 import org.lappsgrid.askme.core.ssl.SSL
 import org.lappsgrid.askme.web.Version
 import org.lappsgrid.askme.web.db.Database
@@ -12,31 +11,9 @@ import org.lappsgrid.askme.web.util.DataCache
 import org.lappsgrid.discriminator.Discriminators
 import org.lappsgrid.rabbitmq.Message
 import org.lappsgrid.rabbitmq.topic.MailBox
+import org.lappsgrid.rabbitmq.topic.MessageBox
 import org.lappsgrid.rabbitmq.topic.PostOffice
 import org.lappsgrid.serialization.Data
-
-/*
-import org.lappsgrid.eager.mining.api.Query
-import org.lappsgrid.eager.mining.api.QueryProcessor
-import org.lappsgrid.eager.mining.core.Configuration
-import org.lappsgrid.eager.mining.core.json.Serializer
-import org.lappsgrid.eager.mining.core.ssl.SSL
-import org.lappsgrid.eager.mining.ranking.RankingEngine
-import org.lappsgrid.eager.mining.ranking.RankingProcessor
-import org.lappsgrid.eager.mining.ranking.model.Document
-import org.lappsgrid.eager.mining.ranking.model.GDDDocument
-import org.lappsgrid.eager.mining.web.db.Database
-import org.lappsgrid.eager.mining.web.db.Question
-import org.lappsgrid.eager.mining.web.nlp.DocumentProcessor
-import org.lappsgrid.eager.mining.web.util.DataCache
-import org.lappsgrid.eager.query.SimpleQueryProcessor
-import org.lappsgrid.eager.query.elasticsearch.ESQueryProcessor
-import org.lappsgrid.eager.query.elasticsearch.GDDSnippetQueryProcessor
-import org.lappsgrid.eager.rabbitmq.Message
-import org.lappsgrid.eager.rabbitmq.topic.MailBox
-import org.lappsgrid.eager.rabbitmq.topic.PostOffice
-import org.lappsgrid.eager.service.Version
-*/
 
 import org.lappsgrid.serialization.Serializer
 import org.lappsgrid.serialization.lif.Container
@@ -60,53 +37,44 @@ import java.util.zip.ZipOutputStream
 @ControllerAdvice
 class AskController {
 
-    private static final Configuration c = new Configuration()
+    private static final Configuration config = new Configuration()
 
 //    @Autowired
 //    private final AskmeSettings settings
 
-//    @Value('${solr.host}')
-//    String SOLR_HOST
-
     @Value('${cache.dir}')
     final String CACHE_DIR
 
-    @Value('${cache.ttl')
-    final int CACHE_TTL
+    @Value('${cache.ttl}')
+    final String CACHE_TTL
 
     @Value('${work.dir}')
     final String WORK_DIR
 
-    @Value('${query.mailbox}')
-    final String QUERY_MBOX
+    @Value('${question.dir}')
+    final String QUESTION_DIR
 
-    @Value('${nlp.mailbox')
-    final String NLP_MBOX
+    @Value('${upload.postoffice}')
+    final String UPLOAD_POSTOFFICE
 
-    @Value('${solr.mailbox}')
-    final String SOLR_MBOX
+    @Value('${upload.address}')
+    final String UPLOAD_ADDRESS
 
-    @Value('${ranking.mailbox}')
-    final String RANKING_MBOX
+    @Value('${galaxy.host}')
+    final String GALAXY_HOST
 
-    @Value('${web.mailbox')
-    final String WEB_MBOX
-    
     @Autowired
     Database db
 
     @Autowired
     Environment env
 
-    QueryProcessor queryProcessor
-    QueryProcessor geoProcessor
-
     // TODO The DocumentProcessor fetches documents from solr.
 //    DocumentProcessor documentProcessor
     DataCache cache
     File workingDir
 
-    ConfigObject config
+    PostOffice po
 
     public AskController() {
 //        queryProcessor = new SimpleQueryProcessor()
@@ -114,11 +82,12 @@ class AskController {
 //        documentProcessor = new DocumentProcessor()
 //        settings = new AskmeSettings()
         SSL.enable()
+        po = new PostOffice(config.EXCHANGE, config.HOST)
     }
 
     @PostConstruct
     private void init() {
-        cache = new DataCache(CACHE_DIR, CACHE_TTL)
+        cache = new DataCache(CACHE_DIR, CACHE_TTL as Integer)
         workingDir = new File(WORK_DIR)
         if (!workingDir.exists()) {
             workingDir.mkdirs()
@@ -155,6 +124,7 @@ class AskController {
         */
     }
 
+    /*
     void set(Map map, String key) {
         String value = env.getProperty(key)
         set(map, key, value)
@@ -178,6 +148,7 @@ class AskController {
             set(current, parts, value)
         }
     }
+    */
 
 //    @GetMapping(path="/env", produces = ['text/plain'])
 //    String printEnv(Model model) {
@@ -247,7 +218,7 @@ class AskController {
 
     @GetMapping(path="/validate")
     @ResponseBody String getValidate(@RequestParam String email) {
-        String url = config.galaxy.host + '/api/users?key=' + config.galaxy.key + '&f_email=' + email
+        String url = GALAXY_HOST + '/api/users?key=' + config.GALAXY_KEY + '&f_email=' + email
 //        String json = new URL(url).text
         logger.debug("Validating email {}", email)
         Map status = [ valid: false]
@@ -348,8 +319,8 @@ class AskController {
         long nBytes = 0
         try {
             // Send the zip to the upload service.
-            po = new PostOffice(config.upload.postoffice)
-            po.send(config.upload.address, zipFile.bytes)
+            po = new PostOffice(UPLOAD_POSTOFFICE, config.HOST)
+            po.send(UPLOAD_ADDRESS, zipFile.bytes)
             po.close()
             nBytes = zipFile.bytes.length
             logger.info("Posted {} bytes to Galaxy.", nBytes)
@@ -386,33 +357,31 @@ class AskController {
         return data.asJson().bytes
     }
 
-    @PostMapping(path="/question", produces="text/html")
-    String postQuestion(@RequestParam Map<String,String> params, Model model) {
+    //TODO Remove @ResponseBody and change produces to text/html
+    @PostMapping(path="/question", produces="application/json")
+    @ResponseBody String postQuestion(@RequestParam Map<String,String> params, Model model) {
         logger.info("POST /question")
         updateModel(model)
         String uuid = UUID.randomUUID()
-        saveQuestion(uuid, params)
-//        if (params.domain == 'geo') {
-//            //TODO Check that a question has been entered
-//            model.addAttribute('data', geodeepdive(params, 1000))
-//            logger.debug("Rendering geodd")
-//            return 'geodd'
-//        }
+        //TODO Save the questions again.
+//        saveQuestion(uuid, params)
 
         long start = System.currentTimeMillis()
         Map reply = answer(params, 100)
         long duration = System.currentTimeMillis() - start
+        reply.duration = duration
+
+        //TODO re-enable the HTML page.
+        /*
         cache.add(uuid, reply)
         model.addAttribute('data', reply)
         model.addAttribute('key', uuid)
-        model.addAttribute('duration', org.lappsgrid.eager.mining.core.Utils.format(duration))
+        model.addAttribute('duration', Utils.format(duration))
+        */
         logger.debug("Rendering data")
-        return 'answer'
+        return Serializer.toPrettyJson(reply)
+        //return 'answer'
     }
-
-//    private String elasticsearch(String question) {
-//        return new ESQueryProcessor().transform(question)
-//    }
 
     private Map answer(Map params) {
         return answer(params, 100)
@@ -428,7 +397,7 @@ class AskController {
                     db.saveSettings(uuid, name, v)
                 }
             }
-            File directory = new File(config.question.dir)
+            File directory = new File(QUESTION_DIR)
             if (!directory.exists()) {
                 if (!directory.mkdirs()) {
                     logger.error("Unable to create directory {}", directory.path)
@@ -444,36 +413,43 @@ class AskController {
     private Map answer(Map params, int size) {
         logger.debug("Generating answer.")
 
+        Object lock = new Object()
+        Map result = [:]
+        boolean timeout = true
+        String returnAddress = UUID.randomUUID().toString()
+        MessageBox box = new MessageBox(config.EXCHANGE, returnAddress, config.HOST) {
+
+            @Override
+            void recv(Message message) {
+                println "Received reply from query service."
+                result.message = message
+                timeout = false
+                synchronized (lock) {
+                    lock.notifyAll()
+                }
+            }
+        }
+
+        logger.trace('Constructing the message.')
         Message message = new Message()
         message.setBody(params.question)
-        message.setRoute([QUERY_MBOX, W])
+        message.setRoute([config.QUERY_MBOX, config.SOLR_MBOX, returnAddress])
         message.setParameters(params)
         message.set("id", UUID.randomUUID().toString())
+        logger.trace('Sending the message')
         po.send(message)
-
-//        logger.trace("Creating CloudSolrClient")
-//        SolrClient solr = new CloudSolrClient.Builder([config.solr.host]).build();
-//
-//        logger.trace("Generating query")
-//        Query query = queryProcessor.transform(params.question)
-//        Map solrParams = [:]
-//        solrParams.q = query.query
-//        solrParams.fl = 'pmid,pmc,doi,year,title,path,abstract,body'
-//        solrParams.rows = config.solr.rows
-//
-//        MapSolrParams queryParams = new MapSolrParams(solrParams)
-//
-//        logger.trace("Sending query to Solr")
-//        final QueryResponse response = solr.query(config.solr.collection, queryParams);
-//        final SolrDocumentList documents = response.getResults();
-//
-//        int n = documents.size()
-//        logger.trace("Received {} documents", n)
-        Map result = [:]
-        result.query = query
+        logger.trace("Waiting for a response")
+        synchronized (lock) {
+            lock.wait(30000)
+        }
+        if (timeout) {
+            logger.warn("Operation timed out")
+            result.error = "Operation timed out."
+        }
+        result.query = params.query
         result.size = 0
 
-        // TODO:
+        // TODO Determine how much of this we still need.
         List docs = [] //documentProcessor.process(documents)
 //        List docs = []
 //        for (int i = 0; i < n; ++i) {
@@ -481,6 +457,7 @@ class AskController {
 //             docs << new Document(doc)
 //        }
 
+        /*
         // TODO We need a session managed bean so multiple users do not overwrite each other's files.
         File base = new File("/tmp/eager")
         if (!base.exists()) {
@@ -499,6 +476,7 @@ class AskController {
 //            Document exemplar = result.documents[0]
 //            result.keys = exemplar.scores.keySet()
 //        }
+*/
         return result
     }
 
@@ -566,9 +544,9 @@ class AskController {
     String fetch(String path) {
         Object lock = new Object()
         String returnAddress = UUID.randomUUID().toString()
-        PostOffice po = new PostOffice(c.EXCHANGE, c.HOST)
+        PostOffice po = new PostOffice(config.EXCHANGE, config.HOST)
         String xml = null //'<body><h1>Error</h1><p>There was a problem loading the document content.</p></body>'
-        MailBox box = new MailBox(c.EXCHANGE, returnAddress, c.HOST) {
+        MailBox box = new MailBox(config.EXCHANGE, returnAddress, config.HOST) {
             void recv(String json) {
                 try {
                     Message message = Serializer.parse(json, Message)

@@ -19,15 +19,9 @@
 		<file>web-service.log</file>
 	</appender>
 	
-	<logger name="org.lappsgrid" level="debug">
-		<appender-ref ref="STDOUT"/>
-		<appender-ref ref="FILE"/>
-	</logger>
-	<logger name="org.lappsgrid.askme" level="trace">
-		<appender-ref ref="STDOUT"/>
-		<appender-ref ref="FILE"/>
-	</logger>
-	<root level="warn">
+	<logger name="org.lappsgrid" level="debug"/>
+	<logger name="org.lappsgrid.askme" level="trace"/>
+	<root level="trace">
 		<appender-ref ref="STDOUT" />
 		<appender-ref ref="FILE"/>
 	</root>
