@@ -423,7 +423,7 @@ class AskController {
         message.setRoute([config.QUERY_MBOX, config.SOLR_MBOX, config.RANKING_MBOX, message.getId()])
         message.setParameters(params)
 
-        MessageBox box = new MessageBox(config.EXCHANGE, returnAddress, config.HOST) {
+        MessageBox box = new MessageBox(config.EXCHANGE, message.getId(), config.HOST) {
 
             @Override
             void recv(Message m) {
