@@ -416,13 +416,19 @@ class AskController {
         Object lock = new Object()
         Map result = [:]
         boolean timeout = true
-        String returnAddress = UUID.randomUUID().toString()
+
+        logger.trace('Constructing the message.')
+        Message message = new Message()
+        message.setBody(params.question)
+        message.setRoute([config.QUERY_MBOX, config.SOLR_MBOX, config.RANKING_MBOX, message.getId()])
+        message.setParameters(params)
+
         MessageBox box = new MessageBox(config.EXCHANGE, returnAddress, config.HOST) {
 
             @Override
-            void recv(Message message) {
+            void recv(Message m) {
                 println "Received reply from query service."
-                result.message = message
+                result.message = m
                 timeout = false
                 synchronized (lock) {
                     lock.notifyAll()
@@ -430,12 +436,6 @@ class AskController {
             }
         }
 
-        logger.trace('Constructing the message.')
-        Message message = new Message()
-        message.setBody(params.question)
-        message.setRoute([config.QUERY_MBOX, config.SOLR_MBOX, returnAddress])
-        message.setParameters(params)
-        message.set("id", UUID.randomUUID().toString())
         logger.trace('Sending the message')
         po.send(message)
         logger.trace("Waiting for a response")
@@ -446,6 +446,11 @@ class AskController {
             logger.warn("Operation timed out")
             result.error = "Operation timed out."
         }
+
+        logger.trace('Shutting down MessageBox')
+        box.close()
+
+
         result.query = params.query
         result.size = 0
 
