@@ -427,8 +427,10 @@ class AskController {
 
             @Override
             void recv(Message m) {
-                println "Received reply from query service."
+                //println "Received reply from query service."
+
                 result.message = m
+                result.documents = m.body
                 timeout = false
                 synchronized (lock) {
                     lock.notifyAll()
