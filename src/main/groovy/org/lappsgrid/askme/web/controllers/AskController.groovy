@@ -3,6 +3,9 @@ package org.lappsgrid.askme.web.controllers
 import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
 import org.lappsgrid.askme.core.Configuration
+import org.lappsgrid.askme.core.api.AskmeMessage
+import org.lappsgrid.askme.core.api.Packet
+import org.lappsgrid.askme.core.api.Query
 import org.lappsgrid.askme.core.ssl.SSL
 import org.lappsgrid.askme.web.Version
 import org.lappsgrid.askme.web.db.Database
@@ -417,12 +420,14 @@ class AskController {
         Map result = [:]
         boolean timeout = true
 
+        Packet packet = new Packet()
+        packet.query = new Query(params.question)
         logger.trace('Constructing the message.')
-        Message message = new Message()
-        message.setBody(params.question)
+        AskmeMessage message = new AskmeMessage()
+        message.setBody(packet)
         message.setRoute([config.QUERY_MBOX, config.SOLR_MBOX, config.RANKING_MBOX, message.getId()])
         message.setParameters(params)
-
+//        AskmeMessage result
         MessageBox box = new MessageBox(config.EXCHANGE, message.getId(), config.HOST) {
 
             @Override
@@ -430,7 +435,8 @@ class AskController {
                 //println "Received reply from query service."
 
                 result.message = m
-                result.documents = m.body
+//                result.documents = m.body
+//                result = (AskmeMessage) m
                 timeout = false
                 synchronized (lock) {
                     lock.notifyAll()
@@ -453,7 +459,7 @@ class AskController {
         box.close()
 
 
-        result.query = params.query
+//        result.query = params.query
         result.size = 0
 
         // TODO Determine how much of this we still need.
