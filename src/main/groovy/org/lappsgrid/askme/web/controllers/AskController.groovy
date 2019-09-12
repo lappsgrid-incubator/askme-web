@@ -457,7 +457,7 @@ class AskController {
         }
 
         logger.trace('Shutting down MessageBox')
-        box.close()
+        //box.close()
 
 
 //        result.query = params.query
