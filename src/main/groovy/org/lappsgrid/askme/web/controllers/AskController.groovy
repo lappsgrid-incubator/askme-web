@@ -3,7 +3,10 @@ package org.lappsgrid.askme.web.controllers
 import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
 import org.lappsgrid.askme.core.Configuration
+import org.lappsgrid.askme.core.api.Query
 import org.lappsgrid.askme.core.ssl.SSL
+import org.lappsgrid.askme.core.Utils
+import org.lappsgrid.askme.core.model.Document
 import org.lappsgrid.askme.web.Version
 import org.lappsgrid.askme.web.db.Database
 import org.lappsgrid.askme.web.db.Question
@@ -14,6 +17,7 @@ import org.lappsgrid.rabbitmq.topic.MailBox
 import org.lappsgrid.rabbitmq.topic.MessageBox
 import org.lappsgrid.rabbitmq.topic.PostOffice
 import org.lappsgrid.serialization.Data
+
 
 import org.lappsgrid.serialization.Serializer
 import org.lappsgrid.serialization.lif.Container
@@ -358,29 +362,26 @@ class AskController {
     }
 
     //TODO Remove @ResponseBody and change produces to text/html
-    @PostMapping(path="/question", produces="application/json")
-    @ResponseBody String postQuestion(@RequestParam Map<String,String> params, Model model) {
+    @PostMapping(path="/question", produces="text/html")
+    String postQuestion(@RequestParam Map<String,String> params, Model model) {
         logger.info("POST /question")
         updateModel(model)
         String uuid = UUID.randomUUID()
-        //TODO Save the questions again.
-//        saveQuestion(uuid, params)
+        saveQuestion(uuid, params)
 
         long start = System.currentTimeMillis()
         Map reply = answer(params, 100)
         long duration = System.currentTimeMillis() - start
         reply.duration = duration
 
-        //TODO re-enable the HTML page.
-        /*
         cache.add(uuid, reply)
         model.addAttribute('data', reply)
         model.addAttribute('key', uuid)
         model.addAttribute('duration', Utils.format(duration))
-        */
+
         logger.debug("Rendering data")
-        return Serializer.toPrettyJson(reply)
-        //return 'answer'
+        //return Serializer.toPrettyJson(reply)
+        return 'answer'
     }
 
     private Map answer(Map params) {
@@ -423,14 +424,17 @@ class AskController {
         message.setRoute([config.QUERY_MBOX, config.SOLR_MBOX, config.RANKING_MBOX, message.getId()])
         message.setParameters(params)
 
-        MessageBox box = new MessageBox(config.EXCHANGE, message.getId(), config.HOST) {
-
+        MailBox box = new MailBox(config.EXCHANGE, message.getId(), config.HOST) {
             @Override
-            void recv(Message m) {
-                //println "Received reply from query service."
+            void recv(String s) {
 
-                result.message = m
-                result.documents = m.body
+                Message m = Serializer.parse(s, Message)
+                result.query = Serializer.parse(m.getCommand(), Query)
+
+                result.documents = (List<Document>) m.body
+
+                //result.documents = m.body
+
                 timeout = false
                 synchronized (lock) {
                     lock.notifyAll()
@@ -450,10 +454,10 @@ class AskController {
         }
 
         logger.trace('Shutting down MessageBox')
-        box.close()
+        //box.close()
 
 
-        result.query = params.query
+        //result.query = params.query
         result.size = 0
 
         // TODO Determine how much of this we still need.
