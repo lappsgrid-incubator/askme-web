@@ -7,6 +7,8 @@ import org.lappsgrid.askme.core.api.AskmeMessage
 import org.lappsgrid.askme.core.api.Packet
 import org.lappsgrid.askme.core.api.Query
 import org.lappsgrid.askme.core.ssl.SSL
+import org.lappsgrid.askme.core.Utils
+import org.lappsgrid.askme.core.model.Document
 import org.lappsgrid.askme.web.Version
 import org.lappsgrid.askme.web.db.Database
 import org.lappsgrid.askme.web.db.Question
@@ -17,6 +19,7 @@ import org.lappsgrid.rabbitmq.topic.MailBox
 import org.lappsgrid.rabbitmq.topic.MessageBox
 import org.lappsgrid.rabbitmq.topic.PostOffice
 import org.lappsgrid.serialization.Data
+
 
 import org.lappsgrid.serialization.Serializer
 import org.lappsgrid.serialization.lif.Container
@@ -361,30 +364,33 @@ class AskController {
         return data.asJson().bytes
     }
 
-    //TODO Remove @ResponseBody and change produces to text/html
-    @PostMapping(path="/question", produces="application/json")
-    @ResponseBody String postQuestion(@RequestParam Map<String,String> params, Model model) {
+    @PostMapping(path="/question", produces="text/html")
+    String postQuestion(@RequestParam Map<String,String> params, Model model) {
         logger.info("POST /question")
         updateModel(model)
         String uuid = UUID.randomUUID()
-        //TODO Save the questions again.
-//        saveQuestion(uuid, params)
+        saveQuestion(uuid, params)
 
         long start = System.currentTimeMillis()
-        Map reply = answer(params, 100)
+        Packet reply = answer(params, 100)
         long duration = System.currentTimeMillis() - start
-        reply.duration = duration
+//        model.addAttribute("duration", duration)
 
-        //TODO re-enable the HTML page.
-        /*
+        Map data = [:]
+        data.documents = reply.documents
+        if (reply.documents.size() > 0) {
+            Document exemplar = reply.documents[0]
+            data.keys = exemplar.scores.keySet()
+        }
+
         cache.add(uuid, reply)
-        model.addAttribute('data', reply)
+        model.addAttribute('data', data)
         model.addAttribute('key', uuid)
         model.addAttribute('duration', Utils.format(duration))
-        */
+
         logger.debug("Rendering data")
-        return Serializer.toPrettyJson(reply)
-        //return 'answer'
+        //return Serializer.toPrettyJson(reply)
+        return 'answer'
     }
 
     private Map answer(Map params) {
@@ -414,12 +420,23 @@ class AskController {
         }
     }
 
-    private Map answer(Map params, int size) {
+    private Packet answer(Map params, int size) {
         logger.debug("Generating answer.")
 
         Object lock = new Object()
-        Map result = [:]
-        boolean timeout = true
+        Packet result = null
+
+        MailBox box = new MailBox(config.EXCHANGE, message.getId(), config.HOST) {
+            @Override
+            void recv(String s) {
+
+                AskmeMessage response = Serializer.parse(s, AskmeMessage)
+                result = response.body
+                synchronized (lock) {
+                    lock.notifyAll()
+                }
+            }
+        }
 
         Packet packet = new Packet()
         packet.query = new Query(params.question)
@@ -428,48 +445,24 @@ class AskController {
         message.setBody(packet)
         message.setRoute([config.QUERY_MBOX, config.SOLR_MBOX, config.RANKING_MBOX, message.getId()])
         message.setParameters(params)
-//        AskmeMessage result
-        MessageBox box = new MessageBox(config.EXCHANGE, message.getId(), config.HOST) {
-
-            @Override
-            void recv(Message m) {
-                //println "Received reply from query service."
-
-                result.message = m
-//                result.documents = m.body
-//                result = (AskmeMessage) m
-                timeout = false
-                synchronized (lock) {
-                    lock.notifyAll()
-                }
-            }
-        }
-
         logger.trace('Sending the message')
         po.send(message)
         logger.trace("Waiting for a response")
         synchronized (lock) {
             lock.wait(30000)
         }
-        if (timeout) {
+        if (result == null) {
             logger.warn("Operation timed out")
-            result.error = "Operation timed out."
+//            result.error = "Operation timed out."
+            result = packet
+            if (packet.documents == null) {
+                packet.documents = []
+            }
         }
 
-        logger.trace('Shutting down MessageBox')
-        //box.close()
+        logger.trace('Shutting down MailBox')
+        box.close()
 
-
-//        result.query = params.query
-        result.size = 0
-
-        // TODO Determine how much of this we still need.
-        List docs = [] //documentProcessor.process(documents)
-//        List docs = []
-//        for (int i = 0; i < n; ++i) {
-//            SolrDocument doc = documents.get(i)
-//             docs << new Document(doc)
-//        }
 
         /*
         // TODO We need a session managed bean so multiple users do not overwrite each other's files.
@@ -480,17 +473,12 @@ class AskController {
         new File(base, 'query.json').text = Serializer.toPrettyJson(query)
         new File(base, 'files.json').text = Serializer.toPrettyJson(docs)
         new File(base, 'params.json').text = Serializer.toPrettyJson(params)
+*/
 
-        result.documents = [] //rank(query, docs, params)
         if (result.documents.size() > size) {
             logger.debug("Trimming results to {}", size)
             result.documents = result.documents[0..size]
         }
-//        if (result.documents.size() > 0) {
-//            Document exemplar = result.documents[0]
-//            result.keys = exemplar.scores.keySet()
-//        }
-*/
         return result
     }
 
