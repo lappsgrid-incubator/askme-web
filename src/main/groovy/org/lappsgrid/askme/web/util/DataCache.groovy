@@ -1,6 +1,7 @@
 package org.lappsgrid.askme.web.util
 
 import groovy.util.logging.Slf4j
+import org.lappsgrid.askme.core.api.Packet
 import org.lappsgrid.serialization.Serializer
 
 import java.util.concurrent.Executors
@@ -60,11 +61,11 @@ class DataCache {
         logger.debug("Cache TTL: {}", ttl)
     }
 
-    String add(Map data) {
+    String add(Packet data) {
         return add(Serializer.toJson(data))
     }
 
-    String add(String uuid, Map data) {
+    String add(String uuid, Packet data) {
         return add(uuid, Serializer.toJson(data))
     }
 

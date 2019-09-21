@@ -20,7 +20,7 @@ content: {
         }
         tr {
             td 'Size'
-            td data.size
+            td data.documents.size()
         }
         tr {
             td 'Time'

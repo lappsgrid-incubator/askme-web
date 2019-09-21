@@ -292,18 +292,19 @@ class AskController {
             return 'error'
         }
 
-        JsonSlurper parser = new JsonSlurper()
-        Map data = parser.parseText(json)
+//        JsonSlurper parser = new JsonSlurper()
+//        Map data = parser.parseText(json)
+        Packet packet = Serializer.parse(json, Packet)
 
         File zipFile = new File(workingDir, "${key}.zip")
         ZipOutputStream zip = new ZipOutputStream(new FileOutputStream(zipFile))
 
         // Create the zip file.
-        data.documents.each { doc ->
-            String id = getId(doc)
-            if (id) try {
+        packet.documents.each { Document doc ->
+//            String id = getId(doc)
+            if (doc.id) try {
                 Container container = new Container()
-                container.text = doc.body
+                container.text = doc.body.text
                 container.language = 'en'
                 container.metadata.pmid = doc.pmid
                 container.metadata.title = doc.title
@@ -316,7 +317,7 @@ class AskController {
                 zip.closeEntry()
             }
             catch (Exception e) {
-                logger.error("Unable to zip document {}", id, e)
+                logger.error("Unable to zip document {}", doc.id, e)
             }
         }
         zip.close()
@@ -378,6 +379,7 @@ class AskController {
 
         Map data = [:]
         data.documents = reply.documents
+        data.query = reply.query
         if (reply.documents.size() > 0) {
             Document exemplar = reply.documents[0]
             data.keys = exemplar.scores.keySet()
@@ -426,11 +428,14 @@ class AskController {
         Object lock = new Object()
         Packet result = null
 
+        logger.trace('Constructing the message.')
+        AskmeMessage message = new AskmeMessage()
+
         MailBox box = new MailBox(config.EXCHANGE, message.getId(), config.HOST) {
             @Override
             void recv(String s) {
-
                 AskmeMessage response = Serializer.parse(s, AskmeMessage)
+                logger.info("Received response for {}", response.id)
                 result = response.body
                 synchronized (lock) {
                     lock.notifyAll()
@@ -440,8 +445,6 @@ class AskController {
 
         Packet packet = new Packet()
         packet.query = new Query(params.question)
-        logger.trace('Constructing the message.')
-        AskmeMessage message = new AskmeMessage()
         message.setBody(packet)
         message.setRoute([config.QUERY_MBOX, config.SOLR_MBOX, config.RANKING_MBOX, message.getId()])
         message.setParameters(params)
@@ -461,7 +464,7 @@ class AskController {
         }
 
         logger.trace('Shutting down MailBox')
-        box.close()
+//        box.close()
 
 
         /*
