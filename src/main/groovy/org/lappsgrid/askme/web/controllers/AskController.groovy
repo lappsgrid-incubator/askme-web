@@ -6,6 +6,7 @@ import org.lappsgrid.askme.core.Configuration
 import org.lappsgrid.askme.core.api.AskmeMessage
 import org.lappsgrid.askme.core.api.Packet
 import org.lappsgrid.askme.core.api.Query
+import org.lappsgrid.askme.core.api.Status
 import org.lappsgrid.askme.core.ssl.SSL
 import org.lappsgrid.askme.core.Utils
 import org.lappsgrid.askme.core.model.Document
@@ -89,6 +90,7 @@ class AskController {
 //        documentProcessor = new DocumentProcessor()
 //        settings = new AskmeSettings()
         SSL.enable()
+        logger.info("Connecting to exchange {} on host {}", config.EXCHANGE, config.HOST)
         po = new PostOffice(config.EXCHANGE, config.HOST)
     }
 
@@ -198,13 +200,13 @@ class AskController {
         logger.info("GET /ask")
         updateModel(model)
         List<String> descriptions = [
-                "consecutive terms",
-                "total search terms",
-                "position",
-                "% search terms",
-                "term order",
-                "1st sentence",
-                "sentence count"
+                ["consecutive terms", "Runs of consecutive search terms score higher."],
+                ["total search terms", "More search terms in the section means a higher score."],
+                ["position", "Search terms that appear early in the section score higher."],
+                ["% search terms", "The percentage of terms that appear in the section."],
+                ["term order", "If searching for 'X Y' then '..X...Y.' scores higher than '..Y...X.'"],
+                ["1st sentence", "Search terms in the first sentence score higher."],
+                ["sentence count", "Weighted by the # of sentences that contain at least one search term."]
         ]
         model.addAttribute("descriptions", descriptions)
         logger.debug("Rendering mainpage")
@@ -304,13 +306,13 @@ class AskController {
 //            String id = getId(doc)
             if (doc.id) try {
                 Container container = new Container()
-                container.text = doc.body.text
+                container.text = doc.body?.text ?: doc.articleAbstract.text
                 container.language = 'en'
                 container.metadata.pmid = doc.pmid
                 container.metadata.title = doc.title
                 container.metadata.year = doc.year
 
-                String zipPath = "$username/${id}.lif"
+                String zipPath = "$username/${doc.id}.lif"
                 ZipEntry entry = new ZipEntry(zipPath)
                 zip.putNextEntry(entry)
                 zip.write(payload(container))
@@ -342,7 +344,7 @@ class AskController {
                 po.close()
             }
         }
-        model.addAttribute('size', data.documents.size())
+        model.addAttribute('size', packet.documents.size())
         model.addAttribute('path', zipFile.path)
         model.addAttribute('bytes', nBytes)
         if (!zipFile.delete()) {
@@ -385,11 +387,17 @@ class AskController {
             data.keys = exemplar.scores.keySet()
         }
 
+        if (reply.status == Status.TIMEOUT || reply.status == Status.ERROR) {
+            if (reply.message) {
+                model.addAttribute('error', reply.message)
+            }
+            return 'error'
+        }
+
         cache.add(uuid, reply)
         model.addAttribute('data', data)
         model.addAttribute('key', uuid)
         model.addAttribute('duration', Utils.format(duration))
-
         logger.debug("Rendering data")
         //return Serializer.toPrettyJson(reply)
         return 'answer'
@@ -444,7 +452,8 @@ class AskController {
         }
 
         Packet packet = new Packet()
-        packet.query = new Query(params.question)
+        packet.status = Status.OK
+        packet.query = new Query(params.question, 1000)
         message.setBody(packet)
         message.setRoute([config.QUERY_MBOX, config.SOLR_MBOX, config.RANKING_MBOX, message.getId()])
         message.setParameters(params)
@@ -452,12 +461,14 @@ class AskController {
         po.send(message)
         logger.trace("Waiting for a response")
         synchronized (lock) {
-            lock.wait(30000)
+            lock.wait(120000)
         }
         if (result == null) {
             logger.warn("Operation timed out")
 //            result.error = "Operation timed out."
             result = packet
+            result.status = Status.TIMEOUT
+            result.message = "The server did not return a response in a timely manner."
             if (packet.documents == null) {
                 packet.documents = []
             }

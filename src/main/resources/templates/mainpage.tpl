@@ -29,13 +29,58 @@ $(document).ready(function() {
             $('#geo-questions').show()
         }
     })
-})
+    $('#scoring-toggle-button').click(function() {
+        console.log("Toggling scoring panels")
+        $(".scoring").toggle()
+        var button = $("#scoring-toggle-button")
+        if (button.text() === 'Show Advanced Scoring Options') {
+            button.html('Hide Advanced Scoring Options')
+        }
+        else {
+            button.html('Show Advanced Scoring Options')
+        }
+    })
+});
+
+''',
+stylesheet: 'css/tooltip.css',
+css: '''
+#scoring-toggle-button {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
 ''',
 content: {
+    h1 'I am eager to help'
     form(action:'question', method:'post', class:'no-border') {
-        h1 'I am eager to help'
+        div {
+            table {
+                tr {
+                    td {
+                        label(for:'domain', 'Domain')
+                        select(id:'domain', name:'domain') {
+                            option(id:'bio', value:'bio', 'CORD-19')
+                            option(id:'pubmed', value:'geo', 'PubMed (coming soon)', disabled:true)
+                            option(id:'pmc', value:'geo', 'PubMed Central (coming soon)', disabled:true)
+                        }
+                    }
+                }
+                tr {
+                    td(colspan:'2') {
+                        input(type:'text', name: 'question', id:'question', placeholder:'Ask me a question.', required:'true', '')
+                    }
+                }
+                tr {
+                    td {
+                        input(type:'submit', class:'btn-ok', value:'Ask', '')
+                    }
+                }
+            }
+        }
+        button(class:'button', id:'scoring-toggle-button','Show Advanced Scoring Options')
+
         fieldset(class:'no-border') {
-            div(class:"column") {
+            div(class:"column hidden scoring") {
                 h3 "Title"
                 table {
                     tr {
@@ -46,7 +91,10 @@ content: {
                     descriptions.eachWithIndex { desc, i ->
                         tr {
                             td { input(type:"checkbox", name:"title-checkbox-${i+1}", class:"title-box", value:(i+1), checked:true) }
-                            td desc
+                            td(class:'tooltip') {
+                                span desc[0]
+                                span(class:'tooltiptext', desc[1])
+                            }
                             td { input(type:'text', name:"title-weight-${i+1}", value:"1.0") }
                         }
                     }
@@ -64,7 +112,7 @@ content: {
                     }
                 }
             }
-            div(class:"column") {
+            div(class:"column hidden scoring") {
                 h3 "Abstract"
                 table {
                     tr {
@@ -75,7 +123,10 @@ content: {
                     descriptions.eachWithIndex { desc, i ->
                         tr {
                             td { input(type:"checkbox", name:"abstract-checkbox-${i+1}", class:"abs-box", value:(i+1), checked:true) }
-                            td desc
+                            td(class:'tooltip') {
+                                span desc[0]
+                                span(class:'tooltoptext', desc[1])
+                            }
                             td { input(type:'text', name:"abstract-weight-${i+1}", value:"1.0") }
                         }
                     }
@@ -93,45 +144,21 @@ content: {
                     }
                 }
             }
-            div(class:'clear') {
-                br()
-                br()
-                table {
-                    tr {
-                        td {
-                            label(for:'domain', 'Domain')
-                            select(id:'domain', name:'domain') {
-                                option(id:'bio', value:'bio', 'Biomedical')
-                                option(id:'geo', value:'geo', 'Geoscience')
-                            }
-                        }
-                    }
-                    tr {
-                        td(colspan:'2') {
-                            input(type:'text', name: 'question', id:'question', placeholder:'Ask me a question.', required:'true', '')
-                        }
-                    }
-                    tr {
-                        td {
-                            input(type:'submit', class:'btn-ok', value:'Ask', '')
-                        }
-                    }
-                }
-                /*
-                div(class:'form-group') {
-                    input(type:'text', name: 'question', id:'question', class:'form-control input-lg', placeholder:'Ask me a question', required:'true', '')
-                }
-                div(class:'row') {
-                    div(class:'col-xs-6 col-sm-6 col-md-6') {
-                        input(type:'submit', class:'btn btl-lg btn-primary btn-block', value:'Ask', '')
-                    }
-                }
-                */
-            }
         }
+    }
+    div {
         div(class:'rounded-corners') {
+            h2 "Examples"
             p "Do you want to check out the system but don't know what to ask?  Try one of these questions:"
             table(id:'bio-questions', class:'grid') {
+                tr {
+                    td "What is the effect of chloroquine on SARS-Cov-2 replication?"
+                }
+                tr {
+                    td "What is the reproductive number of COVID-19 transmission?"
+                }
+            }
+            table(id:'pubmed-questions', class:'grid hidden') {
                 tr {
                     td "What kinases phosphorylate AKT1 on threonine 308?"
                 }

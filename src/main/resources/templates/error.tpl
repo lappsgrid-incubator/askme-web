@@ -4,4 +4,7 @@ version: version,
 content: {
     h1 "Apologies"
     p "Our apologies, but there seems to have been a problem processing your request."
+    if (message != null) {
+        p message
+    }
 }

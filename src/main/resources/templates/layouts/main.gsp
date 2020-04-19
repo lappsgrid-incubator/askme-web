@@ -15,6 +15,16 @@ html {
         if (css) {
             style(css)
         }
+        if (stylesheet) {
+            if (stylesheet instanceof String || stylesheet instanceof GString) {
+                link(rel:'stylesheet', type:'text/css', href:stylesheet, '')
+            }
+            else if (stylesheet instanceof Collection) {
+                stylesheet.each { sheet ->
+                    link(rel:'stylesheet', type:'text/css', href:sheet, '')
+                }
+            }
+        }
     }
     body {
         div(class:'header') {
@@ -29,7 +39,7 @@ html {
             content()
 
             div(class:'copyright') {
-                p 'Copyright 2019 The Language Applications Grid'
+                p 'Copyright &copy; 2020 The Language Applications Grid'
             }
         }
     }

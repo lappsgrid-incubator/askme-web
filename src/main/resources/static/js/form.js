@@ -23,6 +23,7 @@ function validateEmail(email)
 }
 
 function validate(email) {
+    console.log("Validating " + email)
     if (validateEmail(email.value)) {
         checkUser(email.value)
     }
