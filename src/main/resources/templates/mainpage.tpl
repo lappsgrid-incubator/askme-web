@@ -40,17 +40,58 @@ $(document).ready(function() {
             button.html('Show Advanced Scoring Options')
         }
     })
+    $("#submit-button").click(function(event) {
+        console.log("Validating form")
+        if ( $("#question").val() == '' ) {
+            console.log("No question asked.")
+            $("#question").attr("placeholder", "You need to ask a question.")
+            return false
+        }
+        console.log("Validation passed, attempting to disable");
+        var button = $("#submit-button")
+        button.html("Thinking...");
+        button.css("cursor", "not-allowed");
+        button.removeClass('btn-ok')
+        button.addClass('btn-disabled')
+        button.attr("disabled", true)
+        console.log("Button value: " + button.val())
+        console.log("Button html: " + button.html())
+        $("form").submit()
+        return true
+    })
 });
+
+function disable_submit() {
+    console.log("Submit button clicked, attempting to disable");
+    var button = $("#submit-button")
+    button.val("Thinking...");
+    button.css("cursor", "not-allowed");
+    button.removeClass('btn-ok')
+    button.addClass('btn-disabled')
+    button.attr("disabled", true)
+    console.log("Button value: " + button.val())
+    console.log("Button html: " + button.html())
+    return true
+}
 
 ''',
 stylesheet: 'css/tooltip.css',
 css: '''
 #scoring-toggle-button {
     margin-top: 0.5rem;
-    margin-bottom: 0.5rem;
 }
+#warning {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
 ''',
 content: {
+    if (message && message.length > 0) {
+        div(class:'info') {
+            message.each { p it }
+        }
+    }
     h1 'I am eager to help'
     form(action:'question', method:'post', class:'no-border') {
         div {
@@ -61,25 +102,37 @@ content: {
                         select(id:'domain', name:'domain') {
                             option(id:'bio', value:'bio', 'CORD-19')
                             option(id:'pubmed', value:'geo', 'PubMed (coming soon)', disabled:true)
-                            option(id:'pmc', value:'geo', 'PubMed Central (coming soon)', disabled:true)
+                            option(id:'pmc', value:'pmc', 'PubMed Central (coming soon)', disabled:true)
                         }
                     }
                 }
                 tr {
                     td(colspan:'2') {
                         input(type:'text', name: 'question', id:'question', placeholder:'Ask me a question.', required:'true', '')
+                        span(id:'warning', class:'hidden', 'You need to ask a question.')
                     }
                 }
                 tr {
                     td {
-                        input(type:'submit', class:'btn-ok', value:'Ask', '')
+                        //input(id:'submit-button', type:'submit', class:'btn-ok', value:'Ask', onclick:'disable_submit()', '')
+                        button(id:'submit-button', type:'button', class:'btn-ok', 'Ask')
                     }
                 }
             }
         }
         button(class:'button', id:'scoring-toggle-button','Show Advanced Scoring Options')
 
-        fieldset(class:'no-border') {
+        div(class:'section no-border') {
+            div(class:'hidden scoring') {
+                h2 'Scoring'
+                p '''The user question is converted into a Solr query which is used to select
+documents from the <a href="https://pages.semanticscholar.org/coronavirus-research">CORD-19 dataset</a>.'''
+                p '''Each section in a document is assigned a score by summing the weighted
+                scores of a number of different scoring algorithms.  The document score is then
+                calculated by summing the weighted section scores.  The scoring algorithms and
+                weights used can be selected below.'''
+                p '''Users will typically not need to tinker with these settings.'''
+            }
             div(class:"column hidden scoring") {
                 h3 "Title"
                 table {
@@ -125,7 +178,7 @@ content: {
                             td { input(type:"checkbox", name:"abstract-checkbox-${i+1}", class:"abs-box", value:(i+1), checked:true) }
                             td(class:'tooltip') {
                                 span desc[0]
-                                span(class:'tooltoptext', desc[1])
+                                span(class:'tooltiptext', desc[1])
                             }
                             td { input(type:'text', name:"abstract-weight-${i+1}", value:"1.0") }
                         }

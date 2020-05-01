@@ -13,6 +13,7 @@ import org.lappsgrid.askme.core.model.Document
 import org.lappsgrid.askme.web.Version
 import org.lappsgrid.askme.web.db.Database
 import org.lappsgrid.askme.web.db.Question
+import org.lappsgrid.askme.web.services.MessageService
 import org.lappsgrid.askme.web.util.DataCache
 import org.lappsgrid.discriminator.Discriminators
 import org.lappsgrid.rabbitmq.Message
@@ -49,6 +50,9 @@ class AskController {
 
 //    @Autowired
 //    private final AskmeSettings settings
+
+    @Autowired
+    MessageService messages
 
     @Value('${cache.dir}')
     final String CACHE_DIR
@@ -371,6 +375,8 @@ class AskController {
     String postQuestion(@RequestParam Map<String,String> params, Model model) {
         logger.info("POST /question")
         updateModel(model)
+//        if (true) return "ask"
+
         String uuid = UUID.randomUUID()
         saveQuestion(uuid, params)
 
@@ -648,6 +654,9 @@ class AskController {
 
     private void updateModel(Model model) {
         model.addAttribute('version', Version.version)
+        if (messages.hasMessage()) {
+            model.addAttribute('message', messages.message)
+        }
     }
 
     @ExceptionHandler(Exception.class)
