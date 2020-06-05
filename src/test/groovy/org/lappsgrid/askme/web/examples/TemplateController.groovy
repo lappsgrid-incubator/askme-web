@@ -1,4 +1,4 @@
-package org.lappsgrid.eager.askme.web
+package org.lappsgrid.askme.web.examples
 
 import groovy.util.logging.Slf4j
 import org.springframework.stereotype.Controller

@@ -173,14 +173,6 @@
             <releases><enabled>false</enabled></releases>
             <snapshots><enabled>true</enabled></snapshots>
         </repository>
-        <repository>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-            <id>bintray-groovy-maven</id>
-            <name>bintray</name>
-            <url>https://dl.bintray.com/groovy/maven</url>
-        </repository>
     </repositories>
     <pluginRepositories>
         <pluginRepository>

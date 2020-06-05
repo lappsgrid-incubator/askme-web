@@ -1,7 +1,6 @@
 html {
     head {
         title(title)
-<<<<<<< HEAD
         link rel:'stylesheet', type:'text/css', href:'css/main.css'
         script(src:'js/jquery.min.js', '')
         //script(src:'/js/main.js', '')
@@ -43,19 +42,5 @@ html {
                 p 'Copyright &copy; 2020 The Language Applications Grid'
             }
         }
-=======
-//        link rel:'stylesheet', type:'text/css', href:'css/main.css'
-//        script(src:'js/jquery.min.js', '')
-    }
-    body {
-        h1 'The Language Applications Grid'
-        h2 'Ask Me (almost) Anything'
-
-        div {
-            content()
-        }
-
-        p 'Copyright 2019 The Language Applications Grid'
->>>>>>> templates
     }
 }
