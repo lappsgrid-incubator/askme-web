@@ -11,9 +11,9 @@ import org.springframework.stereotype.Service
 class MessageService {
 
     private static final String[] DEFAULT_MESSAGE = [
-            'The AskMe service is under constant development and may go down for maintenance without warning.',
-            'We apologize for any inconvenience this may cause.'
-
+            '<h2>May 3, 2020 12:00 UTC</h2>',
+            '<p>The index has been updated to include access to 68,850 documents from the <a href="https://www.semanticscholar.org/cord19/download">May 1 CORD-19 dataset</a>.</p>',
+            '<p>The AskMe service is under constant development and may go down for maintenance without warning. We apologize for any inconvenience this may cause.</p>'
     ] as String[]
 
     private String[] message = DEFAULT_MESSAGE

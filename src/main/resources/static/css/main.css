@@ -427,6 +427,19 @@ div.content .info {
   width: 90%;
   background-color: #d7f7d4;
 }
+div.content .message {
+  moz-border-radius: 5px;
+  webkit-border-radius: 5px;
+  border-radius: 5px;
+  border-spacing: 0;
+  border: 1px solid #d7f7d4;
+  padding: 10px 20px;
+  margin-bottom: 10px;
+  font-size: 14pt;
+  color: white;
+  width: 100%;
+  background-color: #000000;
+}
 div.content .submit {
   moz-border-radius: 5px;
   webkit-border-radius: 5px;
@@ -594,4 +607,3 @@ div.dialog .dialog-header {
 div.dialog .dialog-body {
   padding: 2px 16px;
 }
-/*# sourceMappingURL=main.css.map */

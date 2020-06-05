@@ -54,6 +54,7 @@ $(document).ready(function() {
         button.removeClass('btn-ok')
         button.addClass('btn-disabled')
         button.attr("disabled", true)
+        button.css("-webkit-appearance", "none")
         console.log("Button value: " + button.val())
         console.log("Button html: " + button.html())
         $("form").submit()
@@ -88,8 +89,8 @@ css: '''
 ''',
 content: {
     if (message && message.length > 0) {
-        div(class:'info') {
-            message.each { p it }
+        div(class:'alert') {
+            message.each { yieldUnescaped it }
         }
     }
     h1 'I am eager to help'
