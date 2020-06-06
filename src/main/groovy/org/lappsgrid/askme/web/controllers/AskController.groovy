@@ -3,6 +3,7 @@ package org.lappsgrid.askme.web.controllers
 import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
 import org.lappsgrid.askme.core.Configuration
+import org.lappsgrid.askme.core.Signal
 import org.lappsgrid.askme.core.api.AskmeMessage
 import org.lappsgrid.askme.core.api.Packet
 import org.lappsgrid.askme.core.api.Query
@@ -14,6 +15,7 @@ import org.lappsgrid.askme.web.Version
 import org.lappsgrid.askme.web.db.Database
 import org.lappsgrid.askme.web.db.Question
 import org.lappsgrid.askme.web.services.MessageService
+import org.lappsgrid.askme.web.services.PostalService
 import org.lappsgrid.askme.web.util.DataCache
 import org.lappsgrid.discriminator.Discriminators
 import org.lappsgrid.rabbitmq.Message
@@ -35,6 +37,7 @@ import org.springframework.web.context.request.WebRequest
 
 import javax.annotation.PostConstruct
 import java.time.Duration
+import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -50,9 +53,6 @@ class AskController {
 
 //    @Autowired
 //    private final AskmeSettings settings
-
-    @Autowired
-    MessageService messages
 
     @Value('${cache.dir}')
     final String CACHE_DIR
@@ -76,26 +76,27 @@ class AskController {
     final String GALAXY_HOST
 
     @Autowired
+    MessageService messages
+
+    @Autowired
     Database db
 
     @Autowired
-    Environment env
+    PostalService po
+
+//    @Autowired
+//    Environment env
 
     // TODO The DocumentProcessor fetches documents from solr.
 //    DocumentProcessor documentProcessor
     DataCache cache
     File workingDir
 
-    PostOffice po
+//    PostOffice po
 
     public AskController() {
-//        queryProcessor = new SimpleQueryProcessor()
-//        geoProcessor = new GDDSnippetQueryProcessor()
-//        documentProcessor = new DocumentProcessor()
-//        settings = new AskmeSettings()
-        SSL.enable()
+//        SSL.enable()
         logger.info("Connecting to exchange {} on host {}", config.EXCHANGE, config.HOST)
-        po = new PostOffice(config.EXCHANGE, config.HOST)
     }
 
     @PostConstruct
@@ -106,69 +107,7 @@ class AskController {
             workingDir.mkdirs()
         }
 
-        /*
-        config = new ConfigObject()
-        Map m = [:]
-        set(m, 'solr.host')
-        set(m, 'solr.collection')
-        set(m, 'solr.rows')
-        set(m, 'galaxy.host')
-        set(m, 'galaxy.key', System.getenv('GALAXY_API_KEY'))
-        set(m, 'root')
-        set(m, 'work.dir')
-        set(m, 'question.dir')
-        set(m, 'cache.dir')
-        set(m, 'cache.ttl')
-        set(m, 'upload.postoffice')
-        set(m, 'upload.address')
-        config.putAll(m)
-        if (config.cache.ttl) {
-            cache = new DataCache(config.cache.dir, Integer.parseInt(config.cache.ttl.trim()))
-        }
-        else {
-            logger.warn("Cache TTL was not found in the configuration")
-            cache = new DataCache(config.cache.dir)
-        }
-
-        workingDir = new File(config.work.dir)
-        if (!workingDir.exists()) {
-            workingDir.mkdirs()
-        }
-        */
     }
-
-    /*
-    void set(Map map, String key) {
-        String value = env.getProperty(key)
-        set(map, key, value)
-    }
-
-    void set(Map map, String key, String value) {
-        set(map, key.tokenize('.'), value)
-    }
-
-    void set(Map map, List parts, String value) {
-        if (parts.size() == 1) {
-            map[parts[0]] = value
-        }
-        else {
-            String key = parts.remove(0)
-            Map current = map[key]
-            if (current == null) {
-                current = [:]
-                map[key] = current
-            }
-            set(current, parts, value)
-        }
-    }
-    */
-
-//    @GetMapping(path="/env", produces = ['text/plain'])
-//    String printEnv(Model model) {
-//        model.addAttribute("solr_host", settings.solr.host)
-//        model.addAttribute("solr_collection", settings.solr.collection)
-//        return "environment"
-//    }
 
     @GetMapping(path="/show", produces = ['text/html'])
     @ResponseBody String getShow(@RequestParam String path) {
@@ -193,12 +132,6 @@ class AskController {
 """
     }
 
-    /*
-                        td 'Number of consecutive terms in title'
-                        td 'Total number of search terms in title'
-                        td 'Term position in title, earlier in the text == better score'
-                        td 'Words in the title that are search terms'
-     */
     @GetMapping(path = "/ask", produces = ['text/html'])
     String getAsk(Model model) {
         logger.info("GET /ask")
@@ -439,37 +372,33 @@ class AskController {
     private Packet answer(Map params, int size) {
         logger.debug("Generating answer.")
 
-        Object lock = new Object()
         Packet result = null
 
         logger.trace('Constructing the message.')
         AskmeMessage message = new AskmeMessage()
 
-        MailBox box = new MailBox(config.EXCHANGE, message.getId(), config.HOST) {
-            @Override
-            void recv(String s) {
-                AskmeMessage response = Serializer.parse(s, AskmeMessage)
-                logger.info("Received response for {}", response.id)
-                result = response.body
-                synchronized (lock) {
-                    lock.notifyAll()
-                }
-            }
-        }
+//        MailBox box = new MailBox(config.EXCHANGE, message.getId(), config.HOST) {
+//            @Override
+//            void recv(String s) {
+//                AskmeMessage response = Serializer.parse(s, AskmeMessage)
+//                logger.info("Received response for {}", response.id)
+//                result = response.body
+//                synchronized (lock) {
+//                    lock.notifyAll()
+//                }
+//            }
+//        }
 
         Packet packet = new Packet()
         packet.status = Status.OK
         packet.query = new Query(params.question, 1000)
         message.setBody(packet)
-        message.setRoute([config.QUERY_MBOX, config.SOLR_MBOX, config.RANKING_MBOX, message.getId()])
+        message.setRoute([config.QUERY_MBOX, config.SOLR_MBOX, config.RANKING_MBOX, config.WEB_MBOX])
         message.setParameters(params)
         logger.trace('Sending the message')
-        po.send(message)
+        Signal signal = po.send(message)
         logger.trace("Waiting for a response")
-        synchronized (lock) {
-            lock.wait(120000)
-        }
-        if (result == null) {
+        if (!signal.await(120, TimeUnit.SECONDS)) {
             logger.warn("Operation timed out")
 //            result.error = "Operation timed out."
             result = packet
@@ -478,9 +407,13 @@ class AskController {
             if (packet.documents == null) {
                 packet.documents = []
             }
+            return result
         }
 
-        logger.trace('Shutting down MailBox')
+        String s = po.pickup(message.id)
+        message = Serializer.parse(s, AskmeMessage)
+        result = message.body
+//        logger.trace('Shutting down MailBox')
 //        box.close()
 
 
@@ -501,20 +434,6 @@ class AskController {
         }
         return result
     }
-
-    /*
-    private List rank(Query query, List<Document> documents, Map params) {
-        logger.debug("Ranking {} documents", documents.size())
-        RankingProcessor process = new RankingProcessor(params)
-        return process.rank(query, documents)
-    }
-
-    private List rank(Query query, List<Document> documents, Map params, Closure getter) {
-        logger.debug("Ranking {} documents", documents.size())
-        RankingEngine ranker = new RankingEngine(params)
-        return ranker.rank(query, documents, getter)
-    }
-    */
 
     private String transform(String xml) {
         XmlParser parser = Factory.createXmlParser()
