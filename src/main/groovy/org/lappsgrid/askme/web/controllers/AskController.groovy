@@ -30,6 +30,7 @@ import org.lappsgrid.serialization.lif.Container
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.env.Environment
+import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
@@ -96,17 +97,18 @@ class AskController {
 
     public AskController() {
 //        SSL.enable()
-        logger.info("Connecting to exchange {} on host {}", config.EXCHANGE, config.HOST)
+        logger.info("Started")
     }
 
     @PostConstruct
     private void init() {
+        logger.info("Initializing")
         cache = new DataCache(CACHE_DIR, CACHE_TTL as Integer)
         workingDir = new File(WORK_DIR)
         if (!workingDir.exists()) {
             workingDir.mkdirs()
         }
-
+        logger.info("Initialized.")
     }
 
     @GetMapping(path="/show", produces = ['text/html'])
@@ -132,7 +134,7 @@ class AskController {
 """
     }
 
-    @GetMapping(path = "/ask", produces = ['text/html'])
+    @GetMapping(path = "/ask")
     String getAsk(Model model) {
         logger.info("GET /ask")
         updateModel(model)
@@ -150,9 +152,10 @@ class AskController {
         return "mainpage"
     }
 
-    @GetMapping(path = '/test', produces = "text/html")
-    String getTest() {
-        return 'test'
+    @GetMapping(path = '/test', produces = "text/plain")
+    ResponseEntity<String> getTest() {
+        return ResponseEntity.ok("test")
+//        return 'test'
     }
 
     @PostMapping(path="/test", produces = "text/html")
@@ -578,8 +581,8 @@ class AskController {
         }
     }
 
-    @ExceptionHandler(Exception.class)
-    protected String handleAddExceptions(Exception ex, WebRequest request) {
-        logger.error("Caught an exception", ex)
-    }
+//    @ExceptionHandler(Exception.class)
+//    protected String handleAddExceptions(Exception ex, WebRequest request) {
+//        logger.error("Caught an exception", ex)
+//    }
 }

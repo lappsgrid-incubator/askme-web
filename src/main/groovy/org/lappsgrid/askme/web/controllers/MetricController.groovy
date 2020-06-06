@@ -2,7 +2,8 @@ package org.lappsgrid.askme.web.controllers
 
 import org.lappsgrid.askme.core.Configuration
 import org.lappsgrid.askme.core.Signal
-import org.lappsgrid.askme.web.NotFoundError
+import org.lappsgrid.askme.web.errors.InternalServerError
+import org.lappsgrid.askme.web.errors.NotFoundError
 import org.lappsgrid.askme.web.services.PostalService
 import org.lappsgrid.rabbitmq.Message
 import org.springframework.beans.factory.annotation.Autowired
@@ -31,13 +32,32 @@ class MetricController {
 
     @GetMapping(path = "/ranking", produces = MediaType.TEXT_PLAIN_VALUE)
     String getRankingMetrics() {
+        return getMetrics(config.RANKING_MBOX)
+    }
+
+    @GetMapping(path = "/solr", produces = MediaType.TEXT_PLAIN_VALUE)
+    String getSolrMetrics() {
+        return getMetrics(config.SOLR_MBOX)
+    }
+
+    @GetMapping(path = "/query", produces = MediaType.TEXT_PLAIN_VALUE)
+    String getQueryMetrics() {
+        return getMetrics(config.QUERY_MBOX)
+    }
+
+    String getMetrics(String service) {
         Message message = new Message()
         message.command = "metrics"
-        message.route(config.RANKING_MBOX, config.WEB_MBOX)
+        message.route(service, config.WEB_MBOX)
 
         Signal signal = po.send(message)
         if (!signal.await(1, TimeUnit.SECONDS)) {
-            throw NotFoundError("The ranking service is not responding")
+            throw new NotFoundError("The $service service is not responding")
         }
+        message = po.pickup(message.id)
+        if ("ok" != message.command) {
+            throw new InternalServerError(message.body ?: "There was a problem getting the metrics from the ranking service")
+        }
+        return message.body()
     }
 }

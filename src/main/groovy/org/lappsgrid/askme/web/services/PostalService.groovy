@@ -9,63 +9,62 @@ import org.lappsgrid.rabbitmq.topic.PostOffice
 import org.lappsgrid.askme.core.Signal
 import org.springframework.stereotype.Service
 
+import javax.annotation.PreDestroy
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- *
+ * Maintains a single connection to the RabbitMQ server.
  */
 @Slf4j
 @Service
 class PostalService {
 
-    Configuration config
+    static final Configuration config = new Configuration()
     PostOffice po
     POBox box
+
     Map<String, String> storage
     Map<String, Signal> signals
 
     PostalService() {
-        config = new Configuration()
+        log.info("PostalService connecting to host {} exchange {}", config.HOST, config.EXCHANGE)
         po = new PostOffice(config.EXCHANGE, config.HOST)
-        box = new POBox()
         storage = new ConcurrentHashMap<>()
         signals = new ConcurrentHashMap<>()
+        log.info("PostalService started.")
     }
 
+    @PreDestroy
     void close() {
+        log.info("Closing PostalService")
         signals.each { name, sig -> sig.send() }
         po.close()
-        box.close()
+        if (box) box.close()
         signals.clear()
         storage.clear()
+        log.info("PostalService closed")
     }
 
     Signal send(Message message) {
+        if (box == null) {
+            box = new POBox(this)
+        }
         Signal signal = new Signal()
         signals.put(message.id, signal)
         po.send(message)
         return signal
     }
 
+    Signal getSignal(String id) {
+        return signals.remove(id)
+    }
+
+    void store(Message message) {
+        storage[message.id] = message
+    }
+
     String pickup(String id) {
         return storage.remove(id)
     }
 
-    class POBox extends MailBox {
-
-        POBox(String exchange, String address) {
-            super(config.EXCHANGE, config.WEB_MBOX, config.HOST)
-        }
-
-        @Override
-        void recv(String message) {
-            Signal signal = signals.remove(message.id)
-            if (signal == null) {
-                log.warn("Received message {} with no signal registered.", message.id)
-                return
-            }
-            storage.put(message.id, message)
-            signal.send()
-        }
-    }
 }
