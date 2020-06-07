@@ -23,12 +23,10 @@
         <append>true</append>
     </appender>
 
-    <logger name="gate.creole.CreoleRegisterImpl" level="error"/>
     <logger name="org.lappsgrid" level="warn"/>
-    <logger name="org.lappsgrid.gate.amqp" level="info"/>
-    <logger name="org.lappsgrid.gate.amqp.rest.controllers" level="debug"/>
-    <logger name="org.lappsgrid.gate.amqp.rest.services" level="debug"/>
-    <logger name="org.lappsgrid.gate.amqp.rest.services.StorageService$Reaper" level="info"/>
+    <logger name="org.lappsgrid.askme" level="info"/>
+    <logger name="org.lappsgrid.askme.web" level="debug"/>
+    <logger name="org.lappsgrid.askme.web.services" level="trace"/>
     <root level="warn">
         <appender-ref ref="STDOUT" />
         <appender-ref ref="FILE"/>

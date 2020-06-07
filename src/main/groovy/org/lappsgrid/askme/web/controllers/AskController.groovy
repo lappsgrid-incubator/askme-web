@@ -3,13 +3,12 @@ package org.lappsgrid.askme.web.controllers
 import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
 import org.lappsgrid.askme.core.Configuration
-import org.lappsgrid.askme.core.Signal
+import org.lappsgrid.askme.core.Utils
 import org.lappsgrid.askme.core.api.AskmeMessage
 import org.lappsgrid.askme.core.api.Packet
 import org.lappsgrid.askme.core.api.Query
 import org.lappsgrid.askme.core.api.Status
-import org.lappsgrid.askme.core.ssl.SSL
-import org.lappsgrid.askme.core.Utils
+import org.lappsgrid.askme.core.concurrent.Signal
 import org.lappsgrid.askme.core.model.Document
 import org.lappsgrid.askme.web.Version
 import org.lappsgrid.askme.web.db.Database
@@ -20,24 +19,18 @@ import org.lappsgrid.askme.web.util.DataCache
 import org.lappsgrid.discriminator.Discriminators
 import org.lappsgrid.rabbitmq.Message
 import org.lappsgrid.rabbitmq.topic.MailBox
-import org.lappsgrid.rabbitmq.topic.MessageBox
 import org.lappsgrid.rabbitmq.topic.PostOffice
 import org.lappsgrid.serialization.Data
-
-
 import org.lappsgrid.serialization.Serializer
 import org.lappsgrid.serialization.lif.Container
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.core.env.Environment
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
-import org.springframework.web.context.request.WebRequest
 
 import javax.annotation.PostConstruct
-import java.time.Duration
 import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream

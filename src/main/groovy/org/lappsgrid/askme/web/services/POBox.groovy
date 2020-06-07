@@ -2,7 +2,7 @@ package org.lappsgrid.askme.web.services
 
 import groovy.util.logging.Slf4j
 import org.lappsgrid.askme.core.Configuration
-import org.lappsgrid.askme.core.Signal
+import org.lappsgrid.askme.core.concurrent.Signal
 import org.lappsgrid.rabbitmq.topic.MailBox
 
 /**

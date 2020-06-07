@@ -1,7 +1,7 @@
 package org.lappsgrid.askme.web.controllers
 
 import org.lappsgrid.askme.core.Configuration
-import org.lappsgrid.askme.core.Signal
+import org.lappsgrid.askme.core.concurrent.Signal
 import org.lappsgrid.askme.web.errors.InternalServerError
 import org.lappsgrid.askme.web.errors.NotFoundError
 import org.lappsgrid.askme.web.services.PostalService

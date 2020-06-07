@@ -2,11 +2,9 @@ package org.lappsgrid.askme.web.services
 
 import groovy.util.logging.Slf4j
 import org.lappsgrid.askme.core.Configuration
+import org.lappsgrid.askme.core.concurrent.Signal
 import org.lappsgrid.rabbitmq.Message
-import org.lappsgrid.rabbitmq.topic.MailBox
-import org.lappsgrid.rabbitmq.topic.MessageBox
 import org.lappsgrid.rabbitmq.topic.PostOffice
-import org.lappsgrid.askme.core.Signal
 import org.springframework.stereotype.Service
 
 import javax.annotation.PreDestroy
