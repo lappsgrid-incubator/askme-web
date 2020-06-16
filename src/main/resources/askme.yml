@@ -1,0 +1,28 @@
+askme:
+  solr:
+    host: http://129.114.16.34:8983/solr
+    collection: bioqa
+    rows: 5000
+
+  galaxy:
+    host: https://galaxy.lappsgrid.org
+
+  directory:
+    root: /${root:/usr/local/eager}
+    work: ${root}/work
+    question.: ${root}/questions
+    cache: ${root}/cache
+
+  cache:
+    ttl: 30
+
+  upload:
+    postoffice: galaxy.upload.service
+    address: zip
+
+  mailbox:
+    query: query
+    nlp: nlp
+    ranking: ranking
+    web: web
+    solr: solr
