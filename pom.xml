@@ -10,7 +10,7 @@
     </parent>
     <groupId>org.lappsgrid.askme</groupId>
     <artifactId>web</artifactId>
-    <version>1.5.3</version>
+    <version>1.6.0</version>
 
     <name>AskMe Web</name>
     <description>AskMe Web service.</description>

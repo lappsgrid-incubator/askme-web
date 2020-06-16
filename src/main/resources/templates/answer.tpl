@@ -84,6 +84,7 @@ content: {
                         data.keys.each { key ->
                             doc.scores[key].each { e ->
                                 td String.format("%2.3f", e.value)
+                                //td e.value
                             }
                             td class:'sum', String.format("%2.3f", doc.scores[key].sum())
                         }

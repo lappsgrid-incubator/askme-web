@@ -2,27 +2,28 @@ package org.lappsgrid.askme.web.controllers
 
 import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
+import io.micrometer.core.annotation.Timed
+import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.MeterRegistry
 import org.lappsgrid.askme.core.Configuration
+import org.lappsgrid.askme.core.Utils
 import org.lappsgrid.askme.core.api.AskmeMessage
 import org.lappsgrid.askme.core.api.Packet
 import org.lappsgrid.askme.core.api.Query
 import org.lappsgrid.askme.core.api.Status
-import org.lappsgrid.askme.core.ssl.SSL
-import org.lappsgrid.askme.core.Utils
 import org.lappsgrid.askme.core.model.Document
 import org.lappsgrid.askme.web.Version
 import org.lappsgrid.askme.web.db.Database
 import org.lappsgrid.askme.web.db.Question
+import org.lappsgrid.askme.web.dto.SearchDomain
 import org.lappsgrid.askme.web.services.MessageService
+import org.lappsgrid.askme.web.services.PostalService
 import org.lappsgrid.askme.web.util.DataCache
 import org.lappsgrid.discriminator.Discriminators
 import org.lappsgrid.rabbitmq.Message
 import org.lappsgrid.rabbitmq.topic.MailBox
-import org.lappsgrid.rabbitmq.topic.MessageBox
 import org.lappsgrid.rabbitmq.topic.PostOffice
 import org.lappsgrid.serialization.Data
-
-
 import org.lappsgrid.serialization.Serializer
 import org.lappsgrid.serialization.lif.Container
 import org.springframework.beans.factory.annotation.Autowired
@@ -34,7 +35,7 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.context.request.WebRequest
 
 import javax.annotation.PostConstruct
-import java.time.Duration
+import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -47,9 +48,6 @@ import java.util.zip.ZipOutputStream
 class AskController {
 
     private static final Configuration config = new Configuration()
-
-//    @Autowired
-//    private final AskmeSettings settings
 
     @Autowired
     MessageService messages
@@ -81,21 +79,23 @@ class AskController {
     @Autowired
     Environment env
 
-    // TODO The DocumentProcessor fetches documents from solr.
-//    DocumentProcessor documentProcessor
+    @Autowired
+    PostalService po
+
+    @Autowired
+    MeterRegistry registry
+
     DataCache cache
     File workingDir
-
-    PostOffice po
+    List<SearchDomain> cores = [
+            new SearchDomain('cord_2020_06_12', 'CORD-19', true),
+            new SearchDomain('pubmed', 'PubMed (coming soon)', false),
+            new SearchDomain('pmc', 'PubMed Central (coming soon)', false)
+    ]
+    Counter questionsAsked
 
     public AskController() {
-//        queryProcessor = new SimpleQueryProcessor()
-//        geoProcessor = new GDDSnippetQueryProcessor()
-//        documentProcessor = new DocumentProcessor()
-//        settings = new AskmeSettings()
-        SSL.enable()
-        logger.info("Connecting to exchange {} on host {}", config.EXCHANGE, config.HOST)
-        po = new PostOffice(config.EXCHANGE, config.HOST)
+        logger.info("AskController started")
     }
 
     @PostConstruct
@@ -105,70 +105,9 @@ class AskController {
         if (!workingDir.exists()) {
             workingDir.mkdirs()
         }
-
-        /*
-        config = new ConfigObject()
-        Map m = [:]
-        set(m, 'solr.host')
-        set(m, 'solr.collection')
-        set(m, 'solr.rows')
-        set(m, 'galaxy.host')
-        set(m, 'galaxy.key', System.getenv('GALAXY_API_KEY'))
-        set(m, 'root')
-        set(m, 'work.dir')
-        set(m, 'question.dir')
-        set(m, 'cache.dir')
-        set(m, 'cache.ttl')
-        set(m, 'upload.postoffice')
-        set(m, 'upload.address')
-        config.putAll(m)
-        if (config.cache.ttl) {
-            cache = new DataCache(config.cache.dir, Integer.parseInt(config.cache.ttl.trim()))
-        }
-        else {
-            logger.warn("Cache TTL was not found in the configuration")
-            cache = new DataCache(config.cache.dir)
-        }
-
-        workingDir = new File(config.work.dir)
-        if (!workingDir.exists()) {
-            workingDir.mkdirs()
-        }
-        */
+//        registry.config().commonTags("application", "askme")
+        questionsAsked = registry.counter("questions")
     }
-
-    /*
-    void set(Map map, String key) {
-        String value = env.getProperty(key)
-        set(map, key, value)
-    }
-
-    void set(Map map, String key, String value) {
-        set(map, key.tokenize('.'), value)
-    }
-
-    void set(Map map, List parts, String value) {
-        if (parts.size() == 1) {
-            map[parts[0]] = value
-        }
-        else {
-            String key = parts.remove(0)
-            Map current = map[key]
-            if (current == null) {
-                current = [:]
-                map[key] = current
-            }
-            set(current, parts, value)
-        }
-    }
-    */
-
-//    @GetMapping(path="/env", produces = ['text/plain'])
-//    String printEnv(Model model) {
-//        model.addAttribute("solr_host", settings.solr.host)
-//        model.addAttribute("solr_collection", settings.solr.collection)
-//        return "environment"
-//    }
 
     @GetMapping(path="/show", produces = ['text/html'])
     @ResponseBody String getShow(@RequestParam String path) {
@@ -193,12 +132,7 @@ class AskController {
 """
     }
 
-    /*
-                        td 'Number of consecutive terms in title'
-                        td 'Total number of search terms in title'
-                        td 'Term position in title, earlier in the text == better score'
-                        td 'Words in the title that are search terms'
-     */
+    @Timed(value = "get_ask", percentiles = [0.5d, 0.95d])
     @GetMapping(path = "/ask", produces = ['text/html'])
     String getAsk(Model model) {
         logger.info("GET /ask")
@@ -213,6 +147,7 @@ class AskController {
                 ["sentence count", "Weighted by the # of sentences that contain at least one search term."]
         ]
         model.addAttribute("descriptions", descriptions)
+        model.addAttribute("cores", cores)
         logger.debug("Rendering mainpage")
         return "mainpage"
     }
@@ -371,9 +306,12 @@ class AskController {
         return data.asJson().bytes
     }
 
+    @Timed(value = "post_question", percentiles = [0.5d, 0.95d])
     @PostMapping(path="/question", produces="text/html")
     String postQuestion(@RequestParam Map<String,String> params, Model model) {
         logger.info("POST /question")
+        logger.info(params.question)
+        questionsAsked.increment()
         updateModel(model)
 //        if (true) return "ask"
 
@@ -382,6 +320,8 @@ class AskController {
 
         long start = System.currentTimeMillis()
         Packet reply = answer(params, 100)
+        new File("/tmp/packet.json").text = Serializer.toPrettyJson(reply)
+//        println Serializer.toPrettyJson(reply)
         long duration = System.currentTimeMillis() - start
 //        model.addAttribute("duration", duration)
 
@@ -400,6 +340,11 @@ class AskController {
             return 'error'
         }
 
+        data.documents.each { Document doc ->
+            if (doc.url.contains("; ")) {
+                doc.url = getBestUrl(doc.url)
+            }
+        }
         cache.add(uuid, reply)
         model.addAttribute('data', data)
         model.addAttribute('key', uuid)
@@ -407,6 +352,30 @@ class AskController {
         logger.debug("Rendering data")
         //return Serializer.toPrettyJson(reply)
         return 'answer'
+    }
+
+    private String getBestUrl(String url) {
+        // There is only one, return it.
+        if (!url.contains(';')) {
+            return url
+        }
+        List<String> candidates = url.tokenize(";").collect {it.trim() }
+        // Search for the best candidate in order
+        ['sciencedirect', 'doi.org', 'ncbi'].each {
+            String best = from(candidates, it)
+            if (best) return best
+        }
+        // Nothing looks "best" so return the first.
+        return candidates[0]
+    }
+
+    private String from(List<String> candidates, String contents) {
+        for (String candidate : candidates) {
+            if (candidate.contains(contents)) {
+                return candidate
+            }
+        }
+        return null
     }
 
     private Map answer(Map params) {
@@ -445,31 +414,34 @@ class AskController {
         logger.trace('Constructing the message.')
         AskmeMessage message = new AskmeMessage()
 
-        MailBox box = new MailBox(config.EXCHANGE, message.getId(), config.HOST) {
-            @Override
-            void recv(String s) {
-                AskmeMessage response = Serializer.parse(s, AskmeMessage)
-                logger.info("Received response for {}", response.id)
-                result = response.body
-                synchronized (lock) {
-                    lock.notifyAll()
-                }
-            }
-        }
+//        MailBox box = new MailBox(config.EXCHANGE, message.getId(), config.HOST) {
+//            @Override
+//            void recv(String s) {
+//                AskmeMessage response = Serializer.parse(s, AskmeMessage)
+//                logger.info("Received response for {}", response.id)
+//                result = response.body
+//                synchronized (lock) {
+//                    lock.notifyAll()
+//                }
+//            }
+//        }
 
         Packet packet = new Packet()
         packet.status = Status.OK
+        packet.core = params.domain
         packet.query = new Query(params.question, 1000)
         message.setBody(packet)
-        message.setRoute([config.QUERY_MBOX, config.SOLR_MBOX, config.RANKING_MBOX, message.getId()])
+        message.setRoute([config.QUERY_MBOX, config.SOLR_MBOX, config.RANKING_MBOX, config.WEB_MBOX])
         message.setParameters(params)
         logger.trace('Sending the message')
-        po.send(message)
+        PostalService.Delivery delivery = po.send(message)
         logger.trace("Waiting for a response")
-        synchronized (lock) {
-            lock.wait(120000)
-        }
-        if (result == null) {
+//        synchronized (lock) {
+//            lock.wait(120000)
+//        }
+        message = delivery.get(60, TimeUnit.SECONDS) as AskmeMessage
+//        result = delivery.get(60, TimeUnit.SECONDS) as Packet
+        if (message == null) {
             logger.warn("Operation timed out")
 //            result.error = "Operation timed out."
             result = packet
@@ -478,9 +450,10 @@ class AskController {
             if (packet.documents == null) {
                 packet.documents = []
             }
+            return result
         }
-
-        logger.trace('Shutting down MailBox')
+        result = message.body
+//        logger.trace('Shutting down MailBox')
 //        box.close()
 
 
@@ -659,8 +632,9 @@ class AskController {
         }
     }
 
-    @ExceptionHandler(Exception.class)
-    protected String handleAddExceptions(Exception ex, WebRequest request) {
-        logger.error("Caught an exception", ex)
-    }
+//    @ExceptionHandler(Exception.class)
+//    protected String handleAddExceptions(Exception ex, WebRequest request) {
+//        logger.error("Caught an exception", ex)
+//        return "error"
+//    }
 }
