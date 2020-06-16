@@ -1,8 +1,11 @@
 package org.lappsgrid.askme.web
 
+import io.micrometer.core.instrument.MeterRegistry
 import org.lappsgrid.askme.core.ssl.SSL
 import org.springframework.boot.SpringApplication
+import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer
 import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.context.annotation.Bean
 
 /**
  *
@@ -14,4 +17,9 @@ class EntryPoint {
         SSL.enable()
         SpringApplication.run(EntryPoint, args)
     }
+
+//    @Bean
+//    MeterRegistryCustomizer<MeterRegistry> metricsCommonTags() {
+//        return { registry -> registry.config().commonTags("application", "askme"); }
+//    }
 }

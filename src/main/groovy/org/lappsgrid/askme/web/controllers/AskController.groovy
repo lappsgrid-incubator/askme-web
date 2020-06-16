@@ -2,6 +2,9 @@ package org.lappsgrid.askme.web.controllers
 
 import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
+import io.micrometer.core.annotation.Timed
+import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.MeterRegistry
 import org.lappsgrid.askme.core.Configuration
 import org.lappsgrid.askme.core.Utils
 import org.lappsgrid.askme.core.api.AskmeMessage
@@ -13,6 +16,7 @@ import org.lappsgrid.askme.core.model.Document
 import org.lappsgrid.askme.web.Version
 import org.lappsgrid.askme.web.db.Database
 import org.lappsgrid.askme.web.db.Question
+import org.lappsgrid.askme.web.dto.SearchDomain
 import org.lappsgrid.askme.web.services.MessageService
 import org.lappsgrid.askme.web.services.PostalService
 import org.lappsgrid.askme.web.util.DataCache
@@ -44,9 +48,6 @@ import java.util.zip.ZipOutputStream
 class AskController {
 
     private static final Configuration config = new Configuration()
-
-//    @Autowired
-//    private final AskmeSettings settings
 
     @Value('${cache.dir}')
     final String CACHE_DIR
@@ -81,16 +82,20 @@ class AskController {
 //    @Autowired
 //    Environment env
 
-    // TODO The DocumentProcessor fetches documents from solr.
-//    DocumentProcessor documentProcessor
+    @Autowired
+    MeterRegistry registry
+
     DataCache cache
     File workingDir
-
-//    PostOffice po
+    List<SearchDomain> cores = [
+            new SearchDomain('cord_2020_06_12', 'CORD-19', true),
+            new SearchDomain('pubmed', 'PubMed (coming soon)', false),
+            new SearchDomain('pmc', 'PubMed Central (coming soon)', false)
+    ]
+    Counter questionsAsked
 
     public AskController() {
-//        SSL.enable()
-        logger.info("Started")
+        logger.info("AskController started")
     }
 
     @PostConstruct
@@ -101,7 +106,8 @@ class AskController {
         if (!workingDir.exists()) {
             workingDir.mkdirs()
         }
-        logger.info("Initialized.")
+//        registry.config().commonTags("application", "askme")
+        questionsAsked = registry.counter("questions")
     }
 
     @GetMapping(path="/show", produces = ['text/html'])
@@ -127,7 +133,8 @@ class AskController {
 """
     }
 
-    @GetMapping(path = "/ask")
+    @Timed(value = "get_ask", percentiles = [0.5d, 0.95d])
+    @GetMapping(path = "/ask", produces = ['text/html'])
     String getAsk(Model model) {
         logger.info("GET /ask")
         updateModel(model)
@@ -141,6 +148,7 @@ class AskController {
                 ["sentence count", "Weighted by the # of sentences that contain at least one search term."]
         ]
         model.addAttribute("descriptions", descriptions)
+        model.addAttribute("cores", cores)
         logger.debug("Rendering mainpage")
         return "mainpage"
     }
@@ -300,9 +308,12 @@ class AskController {
         return data.asJson().bytes
     }
 
+    @Timed(value = "post_question", percentiles = [0.5d, 0.95d])
     @PostMapping(path="/question", produces="text/html")
     String postQuestion(@RequestParam Map<String,String> params, Model model) {
         logger.info("POST /question")
+        logger.info(params.question)
+        questionsAsked.increment()
         updateModel(model)
 //        if (true) return "ask"
 
@@ -311,6 +322,8 @@ class AskController {
 
         long start = System.currentTimeMillis()
         Packet reply = answer(params, 100)
+        new File("/tmp/packet.json").text = Serializer.toPrettyJson(reply)
+//        println Serializer.toPrettyJson(reply)
         long duration = System.currentTimeMillis() - start
 //        model.addAttribute("duration", duration)
 
@@ -329,6 +342,11 @@ class AskController {
             return 'error'
         }
 
+        data.documents.each { Document doc ->
+            if (doc.url.contains("; ")) {
+                doc.url = getBestUrl(doc.url)
+            }
+        }
         cache.add(uuid, reply)
         model.addAttribute('data', data)
         model.addAttribute('key', uuid)
@@ -336,6 +354,30 @@ class AskController {
         logger.debug("Rendering data")
         //return Serializer.toPrettyJson(reply)
         return 'answer'
+    }
+
+    private String getBestUrl(String url) {
+        // There is only one, return it.
+        if (!url.contains(';')) {
+            return url
+        }
+        List<String> candidates = url.tokenize(";").collect {it.trim() }
+        // Search for the best candidate in order
+        ['sciencedirect', 'doi.org', 'ncbi'].each {
+            String best = from(candidates, it)
+            if (best) return best
+        }
+        // Nothing looks "best" so return the first.
+        return candidates[0]
+    }
+
+    private String from(List<String> candidates, String contents) {
+        for (String candidate : candidates) {
+            if (candidate.contains(contents)) {
+                return candidate
+            }
+        }
+        return null
     }
 
     private Map answer(Map params) {
@@ -387,14 +429,20 @@ class AskController {
 
         Packet packet = new Packet()
         packet.status = Status.OK
+        packet.core = params.domain
         packet.query = new Query(params.question, 1000)
         message.setBody(packet)
         message.setRoute([config.QUERY_MBOX, config.SOLR_MBOX, config.RANKING_MBOX, config.WEB_MBOX])
         message.setParameters(params)
         logger.trace('Sending the message')
-        Signal signal = po.send(message)
+        PostalService.Delivery delivery = po.send(message)
         logger.trace("Waiting for a response")
-        if (!signal.await(120, TimeUnit.SECONDS)) {
+//        synchronized (lock) {
+//            lock.wait(120000)
+//        }
+        message = delivery.get(60, TimeUnit.SECONDS) as AskmeMessage
+//        result = delivery.get(60, TimeUnit.SECONDS) as Packet
+        if (message == null) {
             logger.warn("Operation timed out")
 //            result.error = "Operation timed out."
             result = packet
@@ -405,9 +453,6 @@ class AskController {
             }
             return result
         }
-
-        String s = po.pickup(message.id)
-        message = Serializer.parse(s, AskmeMessage)
         result = message.body
 //        logger.trace('Shutting down MailBox')
 //        box.close()
@@ -577,5 +622,6 @@ class AskController {
 //    @ExceptionHandler(Exception.class)
 //    protected String handleAddExceptions(Exception ex, WebRequest request) {
 //        logger.error("Caught an exception", ex)
+//        return "error"
 //    }
 }

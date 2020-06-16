@@ -11,9 +11,11 @@ import org.springframework.stereotype.Service
 class MessageService {
 
     private static final String[] DEFAULT_MESSAGE = [
-            '<h2>May 3, 2020 12:00 UTC</h2>',
-            '<p>The index has been updated to include access to 68,850 documents from the <a href="https://www.semanticscholar.org/cord19/download">May 1 CORD-19 dataset</a>.</p>',
-            '<p>The AskMe service is under constant development and may go down for maintenance without warning. We apologize for any inconvenience this may cause.</p>'
+            '<h2>June 15, 2020 12:00 UTC</h2>',
+            'The Solr index is being updated and queries may return inconsistent, or even empty results. This message will be updated when the update has been completed.'
+//            '<h2>June 15, 2020 12:00 UTC</h2>',
+//            '<p>The index has been updated to include access to the <a href="https://www.semanticscholar.org/cord19/download">June 12 CORD-19 dataset</a>.</p>',
+//            '<p>The AskMe service is under constant development and may go down for maintenance without warning. We apologize for any inconvenience this may cause.</p>'
     ] as String[]
 
     private String[] message = DEFAULT_MESSAGE

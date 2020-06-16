@@ -100,10 +100,14 @@ content: {
                 tr {
                     td {
                         label(for:'domain', 'Domain')
-                        select(id:'domain', name:'domain') {
-                            option(id:'bio', value:'bio', 'CORD-19')
-                            option(id:'pubmed', value:'geo', 'PubMed (coming soon)', disabled:true)
-                            option(id:'pmc', value:'pmc', 'PubMed Central (coming soon)', disabled:true)
+                        select(id:'domain', name:'domain')
+                            cores.each { core ->
+                                if (core.enabled) {
+                                    option(id:core.id, value:core.id, core.label)
+                                }
+                                else {
+                                    option(id:core.id, value:core.id, disabled:true, core.label)
+                                }
                         }
                     }
                 }

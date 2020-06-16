@@ -5,6 +5,11 @@ content: {
     p "Our apologies, but there seems to have been a problem processing your request."
     p "Please contact suderman@cs.vassar.edu and/or marc@cs.brandeis.edu if you wish to report a bug."
     if (message != null) {
-        p message
+        if (message instanceof Collection) {
+            message.each { p it }
+        }
+        else {
+            p message.toString()
+        }
     }
 }
