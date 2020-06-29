@@ -322,6 +322,7 @@ class AskController {
 
         long start = System.currentTimeMillis()
         Packet reply = answer(params, 100)
+        new File("/tmp/params.json").text = Serializer.toPrettyJson(params)
         new File("/tmp/packet.json").text = Serializer.toPrettyJson(reply)
 //        println Serializer.toPrettyJson(reply)
         long duration = System.currentTimeMillis() - start

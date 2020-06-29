@@ -2,7 +2,10 @@ html {
     head {
         title(title)
         link rel:'stylesheet', type:'text/css', href:'css/main.css'
-        script(src:'js/jquery.min.js', '')
+        link rel:'stylesheet', type:'text/css', href:'css/jquery.dataTables.min.css'
+        //script(src:'js/jquery.min.js', '')
+        script(src:'js/jquery-3.5.1.min.js', '')
+        script(src:'js/jquery.dataTables.min.js', '')
         //script(src:'/js/main.js', '')
         if (include) {
             include.split(',').each {
