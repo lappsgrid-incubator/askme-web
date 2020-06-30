@@ -69,7 +69,7 @@ content: {
                 tbody {
                     data.documents.eachWithIndex { doc, i ->
                         tr {
-                            td String.format("%4d", i)
+                            td String.format("%4d", i+1)
                             td String.format("%2.3f", doc.score)
                             if (doc.pmc) {
                                 td { a(href:doc.url, target:'_blank', doc.pmc) }
@@ -110,7 +110,7 @@ content: {
                 tbody {
                     data.documents.eachWithIndex { doc, i ->
                         tr {
-                            td String.format("%4d", i)
+                            td String.format("%4d", i+1)
                             td String.format("%2.3f", doc.score)
                             if (doc.pmc) {
                                 td { a(href:doc.url, target:'_blank', doc.pmc) }
