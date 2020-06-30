@@ -441,7 +441,7 @@ class AskController {
 //        synchronized (lock) {
 //            lock.wait(120000)
 //        }
-        message = delivery.get(60, TimeUnit.SECONDS) as AskmeMessage
+        message = delivery.get(180, TimeUnit.SECONDS) as AskmeMessage
 //        result = delivery.get(60, TimeUnit.SECONDS) as Packet
         if (message == null) {
             logger.warn("Operation timed out")
@@ -470,10 +470,10 @@ class AskController {
         new File(base, 'params.json').text = Serializer.toPrettyJson(params)
 */
 
-        if (result.documents.size() > size) {
-            logger.debug("Trimming results to {}", size)
-            result.documents = result.documents[0..size]
-        }
+//        if (result.documents.size() > size) {
+//            logger.debug("Trimming results to {}", size)
+//            result.documents = result.documents[0..size]
+//        }
         return result
     }
 
