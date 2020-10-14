@@ -232,7 +232,7 @@ class AskController {
         if (json == null) {
             logger.warn("Data for {} was not found in the cache.", key)
             model.addAttribute('message', 'The data was not found in the cache!')
-            return 'error'
+            return 'error_page'
         }
 
 //        JsonSlurper parser = new JsonSlurper()
@@ -340,7 +340,7 @@ class AskController {
             if (reply.message) {
                 model.addAttribute('error', reply.message)
             }
-            return 'error'
+            return 'error_page'
         }
 
         data.documents.each { Document doc ->
