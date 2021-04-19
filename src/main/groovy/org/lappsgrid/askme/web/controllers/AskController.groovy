@@ -321,7 +321,7 @@ class AskController {
         saveQuestion(uuid, params)
 
         long start = System.currentTimeMillis()
-        Packet reply = answer(params, 100)
+        Packet reply = answer(params, 500)
         new File("/tmp/params.json").text = Serializer.toPrettyJson(params)
         new File("/tmp/packet.json").text = Serializer.toPrettyJson(reply)
 //        println Serializer.toPrettyJson(reply)
@@ -431,7 +431,7 @@ class AskController {
         Packet packet = new Packet()
         packet.status = Status.OK
         packet.core = params.domain
-        packet.query = new Query(params.question, 1000)
+        packet.query = new Query(params.question, size)
         message.setBody(packet)
         message.setRoute([config.QUERY_MBOX, config.SOLR_MBOX, config.RANKING_MBOX, config.WEB_MBOX])
         message.setParameters(params)

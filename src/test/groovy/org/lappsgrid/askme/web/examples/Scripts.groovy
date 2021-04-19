@@ -10,7 +10,7 @@ import org.junit.Test
  * Being able to easily run Strings as Groovy code is very powerful, but also
  * very dangerous.
  */
-@Ignore
+//@Ignore
 class Scripts {
 
     @Test
