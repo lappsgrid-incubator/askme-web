@@ -11,3 +11,6 @@ Version.java
 *.log
 *.log
 
+.DS_Store
+askme.ini
+

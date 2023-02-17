@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-IP=129.114.17.83
-#IP=localhost
 PORT=11111
 
 if [[ -n "$1" ]] ; then
