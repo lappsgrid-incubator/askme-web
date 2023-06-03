@@ -2,21 +2,28 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>2.2.6.RELEASE</version>
     </parent>
+
     <groupId>org.lappsgrid.askme</groupId>
     <artifactId>web</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
 
     <name>AskMe Web</name>
     <description>AskMe Web service.</description>
+
     <properties>
-        <groovy.version>2.5.3</groovy.version>
+        <!-- The parent POM has a different Groovy version than parent POM of other  -->
+        <!-- AskMe components, making sure that we use the same version.             -->
+        <groovy.version>2.5.14</groovy.version>
     </properties>
+
     <build>
         <finalName>${project.artifactId}-${project.version}-${git.commit.id.describe-short}</finalName>
         <plugins>
@@ -133,8 +140,8 @@
             </plugin>
             -->
         </plugins>
-
     </build>
+
     <dependencies>
         <dependency>
             <groupId>org.codehaus.groovy</groupId>
@@ -144,12 +151,12 @@
         <dependency>
             <groupId>org.lappsgrid</groupId>
             <artifactId>rabbitmq</artifactId>
-            <version>1.2.0-SNAPSHOT</version>
+            <version>1.2.0</version>
         </dependency>
         <dependency>
             <groupId>org.lappsgrid.askme</groupId>
             <artifactId>core</artifactId>
-            <version>2.1.0-SNAPSHOT</version>
+            <version>2.1.0</version>
         </dependency>
         <dependency>
             <groupId>org.lappsgrid</groupId>
@@ -158,17 +165,11 @@
         </dependency>
         <!--
         <dependency>
-            <groupId>org.lappsgrid.askme</groupId>
-            <artifactId>query</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <version>1.7.25</version>
         </dependency>
-                -->
-
+        -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -181,7 +182,6 @@
             </exclusions>
             -->
         </dependency>
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
@@ -190,8 +190,6 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
-        <!--
-        -->
         <!--
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -242,6 +240,7 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
     <repositories>
         <repository>
             <id>sonatype-snapshots</id>
@@ -262,6 +261,7 @@
             <url>https://dl.bintray.com/groovy/maven</url>
         </repository>
     </repositories>
+
     <pluginRepositories>
         <pluginRepository>
             <snapshots>
