@@ -16,7 +16,10 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.concurrent.TimeUnit
 
 /**
- *
+ * Return metrics for the other services to be consumed by Grafana.
+ * <p>Since the other services do not expose any public ports the web controller
+ * acts as their proxy.
+ * </p>
  */
 @RestController
 @RequestMapping("/metrics")
@@ -61,7 +64,7 @@ class MetricController {
         }
         message = object as Message
         if ("ok" != message.command) {
-            throw new InternalServerError(message.body ?: "There was a problem getting the metrics from the ranking service")
+            throw new InternalServerError(message.body ?: "There was a problem getting the metrics from the $service service")
         }
         return message.body
     }

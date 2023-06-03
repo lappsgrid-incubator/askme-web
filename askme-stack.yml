@@ -1,0 +1,61 @@
+version: '3.3'
+services:
+  query:
+    image: docker.lappsgrid.org/askme/query:1.0.0
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [ node.labels.worker == true ]
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    secrets:
+      - askme.ini
+  ranking:
+    image: docker.lappsgrid.org/askme/ranking:1.0.0
+    deploy:
+      replicas: 2
+      placement:
+        constraints: [ node.labels.worker == true ]
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    secrets:
+      - askme.ini
+  solr:
+    image: docker.lappsgrid.org/askme/solr:1.0.0
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [ node.labels.worker == true ]
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    secrets:
+      - askme.ini
+  web:
+    image: docker.lappsgrid.org/askme/web:1.7.0-SNAPSHOT
+    ports:
+      - 8085:8080
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [ node.labels.worker == true ]
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    secrets:
+      - askme.ini
+secrets:
+  askme.ini:
+    external: true
+#networks:
+#volumes:
