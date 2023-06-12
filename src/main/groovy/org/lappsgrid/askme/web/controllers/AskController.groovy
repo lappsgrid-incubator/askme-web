@@ -93,15 +93,15 @@ class AskController {
     @PostMapping(path = "/question", produces = "application/json")
     String postQuestion(@RequestParam Map<String, String> params) {
         logger.info("POST /question")
-        logger.info(params.question)
+        logger.info("Question : {}", params.question)
         questionsAsked.increment()
         String uuid = UUID.randomUUID()
         saveQuestion(uuid, params)
 
         long start = System.currentTimeMillis()
         Packet reply = answer(params, 100)
-        new File("/tmp/params.json").text = Serializer.toPrettyJson(params)
-        new File("/tmp/packet.json").text = Serializer.toPrettyJson(reply)
+        new File("/tmp/askme-params.json").text = Serializer.toPrettyJson(params)
+        new File("/tmp/askme-packet.json").text = Serializer.toPrettyJson(reply)
         long duration = System.currentTimeMillis() - start
 
         Map data = [:]

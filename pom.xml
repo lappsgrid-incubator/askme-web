@@ -19,13 +19,16 @@
     <description>AskMe Web service.</description>
 
     <properties>
-        <!-- The parent POM has a different Groovy version than parent POM of other  -->
-        <!-- AskMe components, making sure that we use the same version.             -->
+        <lappsgrid.askme.core.version>2.2.0</lappsgrid.askme.core.version>
+        <lappsgrid.rabbitmq.version>1.2.0</lappsgrid.rabbitmq.version>
+        <lapps.serialization.version>2.7.0</lapps.serialization.version>
+        <!-- The parent POM has a different Groovy version than the parent POM of  -->
+        <!-- other AskMe components, making sure that we use the same version.     -->
         <groovy.version>2.5.14</groovy.version>
     </properties>
 
     <build>
-        <finalName>${project.artifactId}-${project.version}-${git.commit.id.describe-short}</finalName>
+        <finalName>${project.artifactId}-${project.version}-${git.commit.id.describe}</finalName>
         <plugins>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -151,17 +154,17 @@
         <dependency>
             <groupId>org.lappsgrid</groupId>
             <artifactId>rabbitmq</artifactId>
-            <version>1.2.0</version>
+            <version>${lappsgrid.rabbitmq.version}</version>
         </dependency>
         <dependency>
             <groupId>org.lappsgrid.askme</groupId>
             <artifactId>core</artifactId>
-            <version>2.1.0</version>
+            <version>${lappsgrid.askme.core.version}</version>
         </dependency>
         <dependency>
             <groupId>org.lappsgrid</groupId>
             <artifactId>serialization</artifactId>
-            <version>2.7.0</version>
+            <version>${lapps.serialization.version}</version>
         </dependency>
         <!--
         <dependency>
@@ -252,16 +255,9 @@
                 <enabled>true</enabled>
             </snapshots>
         </repository>
-        <repository>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-            <id>bintray-groovy-maven</id>
-            <name>bintray</name>
-            <url>https://dl.bintray.com/groovy/maven</url>
-        </repository>
     </repositories>
 
+    <!--
     <pluginRepositories>
         <pluginRepository>
             <snapshots>
@@ -272,5 +268,6 @@
             <url>https://dl.bintray.com/groovy/maven</url>
         </pluginRepository>
     </pluginRepositories>
+    -->
 
 </project>
