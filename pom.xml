@@ -15,7 +15,7 @@
     <name>AskMe Web</name>
     <description>AskMe Web service.</description>
     <properties>
-        <groovy.version>3.0.17</groovy.version>
+        <groovy.version>3.0.18</groovy.version>
     </properties>
     <build>
         <finalName>service</finalName>
