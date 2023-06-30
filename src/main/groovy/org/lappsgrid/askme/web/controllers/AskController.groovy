@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.*
 import javax.annotation.PostConstruct
 import java.util.concurrent.TimeUnit
 
+
 @Slf4j("logger")
 @RestController
 @ControllerAdvice
@@ -92,8 +93,8 @@ class AskController {
     @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping(path = "/question", produces = "application/json")
     String postQuestion(@RequestParam Map<String, String> params) {
-        logger.info("POST /question")
-        logger.info("Question : {}", params.question)
+        logger.info("POST /question?question={}", , params.question)
+        //logger.info("Question : {}", params.question)
         questionsAsked.increment()
         String uuid = UUID.randomUUID()
         saveQuestion(uuid, params)
@@ -123,7 +124,8 @@ class AskController {
 //            }
 //        }
 
-        cache.add(uuid, reply)
+        //TODO: rebuild and see whether there are still outstanding deliveries
+        //cache.add(uuid, reply)
         return Serializer.toJson(data)
     }
 
