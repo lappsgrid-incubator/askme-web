@@ -19,7 +19,7 @@
     <description>AskMe Web service.</description>
 
     <properties>
-        <lappsgrid.askme.core.version>2.3.0-SNAPSHOT</lappsgrid.askme.core.version>
+        <lappsgrid.askme.core.version>2.3.0</lappsgrid.askme.core.version>
         <lappsgrid.rabbitmq.version>1.2.0</lappsgrid.rabbitmq.version>
         <lapps.serialization.version>2.7.0</lapps.serialization.version>
         <!-- The parent POM has a different Groovy version than the parent POM of  -->
